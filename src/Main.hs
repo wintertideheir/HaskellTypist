@@ -1,42 +1,51 @@
 module Main where
 
+import Session
+
+import Control.Monad.IO.Class (liftIO)
+
 import Brick
+import Brick.Types
 import Brick.Widgets.Center
 import Brick.Widgets.Border
 import Brick.Widgets.Border.Style
 import qualified Graphics.Vty as V
 
-data AppState = AppState { testInput :: String
-                         , testText :: String }
-initialAppState :: AppState
-initialAppState = AppState { testInput = ""
-                           , testText = "Gallia est omnis divisa in partes tres, \
-                                        \quarum unam incolunt Belgae, aliam Aquitani, \
-                                        \tertiam qui ipsorum lingua Celtae, \
-                                        \nostra Galli appellantur."
-                           }
+initialSession :: Session
+initialSession = sessionFromText "Gallia est omnis divisa in partes tres, \
+                                 \quarum unam incolunt Belgae, aliam Aquitani, \
+                                 \tertiam qui ipsorum lingua Celtae, \
+                                 \nostra Galli appellantur."
 
-app :: App AppState () ()
-app = App { appDraw = drawFunction
+themes     :: AttrMap
+themeMiss  :: AttrName
+themeMatch :: AttrName
+themes = attrMap (V.white `on` V.black)
+    [ (themeMiss,  fg $ V.rgbColor 255 150 150) -- A light red.
+    , (themeMatch, fg $ V.rgbColor 150 255 150) -- A light green.
+    ]
+themeMiss  = attrName "miss"
+themeMatch = attrName "match"
+
+app :: App Session () ()
+app = App { appDraw         = drawFunction
           , appChooseCursor = neverShowCursor
-          , appHandleEvent = keyHandler
-          , appStartEvent = return
-          , appAttrMap = const $ attrMap V.defAttr []
-          }
+          , appHandleEvent  = keyHandler
+          , appStartEvent   = return
+          , appAttrMap      = const themes }
 
-keyHandler :: AppState -> BrickEvent () () -> EventM () (Next AppState)
-keyHandler s (VtyEvent (V.EvKey V.KEsc []))        = halt s
-keyHandler s (VtyEvent (V.EvKey (V.KChar c) [])) = 
-    if (length $ testInput s) == (length $ testText s)
-    then continue s
-    else
-        if c == ((testText s) !! (length $ testInput s))
-        then continue (s {testInput = (testInput s) ++ [c]})
-        else continue (s {testInput = (testInput s) ++ ['_']})
-keyHandler s _                                     = continue s
+keyHandler :: Session -> BrickEvent () () -> EventM () (Next Session)
+keyHandler s (VtyEvent (V.EvKey V.KEsc []))      = halt s
+keyHandler s (VtyEvent (V.EvKey (V.KChar c) [])) = liftIO (recordKeystroke s c) >>= continue
+keyHandler s _                                   = continue s
 
-drawFunction :: AppState -> [Widget n]
-drawFunction s = [withBorderStyle unicode $ borderWithLabel (str "Haskell Typist") $ center $ ((str $ testText s) <=> (str $ testInput s))]
+drawFunction :: Session -> [Widget n]
+drawFunction s =
+    let applyTheme c (Just True)  = withAttr themeMatch $ str [c]
+        applyTheme c (Just False) = withAttr themeMiss  $ str [c]
+        applyTheme c Nothing      = str [c]
+    in [withBorderStyle unicode $ borderWithLabel (str "Haskell Typist") $ center
+        $ foldr (<+>) emptyWidget (renderKeystrokes s applyTheme)]
 
-main :: IO AppState
-main = defaultMain app initialAppState
+main :: IO Session
+main = defaultMain app initialSession

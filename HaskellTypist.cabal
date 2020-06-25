@@ -18,7 +18,7 @@ cabal-version:       >=1.10
 
 executable HaskellTypist
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       Session
   -- other-extensions:
   ghc-options: -threaded
   build-depends:       base >=4.11 && <4.12,
