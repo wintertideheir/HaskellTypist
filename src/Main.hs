@@ -20,16 +20,16 @@ initialSession = sessionFromText "Gallia est omnis divisa in partes tres, \
 themes     :: AttrMap
 themeMiss  :: AttrName
 themeMatch :: AttrName
-themes = attrMap (V.white `on` V.black)
-    [ (themeMiss,  fg $ V.rgbColor 255 150 150) -- A light red.
-    , (themeMatch, fg $ V.rgbColor 150 255 150) -- A light green.
+themes = attrMap (V.black `on` V.white)
+    [ (themeMiss,  bg V.red)
+    , (themeMatch, fg $ V.rgbColor 50 50 50)
     ]
 themeMiss  = attrName "miss"
 themeMatch = attrName "match"
 
 app :: App Session () ()
 app = App { appDraw         = drawFunction
-          , appChooseCursor = neverShowCursor
+          , appChooseCursor = showFirstCursor
           , appHandleEvent  = keyHandler
           , appStartEvent   = return
           , appAttrMap      = const themes }
@@ -39,11 +39,11 @@ keyHandler s (VtyEvent (V.EvKey V.KEsc []))      = halt s
 keyHandler s (VtyEvent (V.EvKey (V.KChar c) [])) = liftIO (recordKeystroke s c) >>= continue
 keyHandler s _                                   = continue s
 
-drawFunction :: Session -> [Widget n]
+drawFunction :: Session -> [Widget ()]
 drawFunction s =
     let applyTheme c (Just True)  = withAttr themeMatch $ str [c]
         applyTheme c (Just False) = withAttr themeMiss  $ str [c]
-        applyTheme c Nothing      = str [c]
+        applyTheme c Nothing      = showCursor () (Location (0, 0)) (str [c])
     in [withBorderStyle unicode $ borderWithLabel (str "Haskell Typist") $ center
         $ foldr (<+>) emptyWidget (renderKeystrokes s applyTheme)]
 
