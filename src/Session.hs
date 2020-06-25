@@ -21,9 +21,9 @@ recordKeystroke s c =
         t <- System.CPUTime.getCPUTime
         return s { keystrokes = (keystrokes s) ++ [(t, c)] }
 
-renderKeytrokes :: Session -> (Char -> Maybe Bool -> a) -> [a]
-renderKeytrokes s t =
+renderKeystrokes :: Session -> (Char -> Maybe Bool -> a) -> [a]
+renderKeystrokes s t =
     let matched    = zip (map snd (keystrokes s)) (text s)
         complete   = map (\x -> t (snd x) (Just ((fst x) == (snd x)))) matched
         incomplete = map (\x -> t x Nothing)                           (drop (length $ keystrokes s) $ text s)
-    in complete ++ complete
+    in complete ++ incomplete
