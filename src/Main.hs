@@ -21,7 +21,7 @@ themes     :: AttrMap
 themeMiss  :: AttrName
 themeMatch :: AttrName
 themes = attrMap (V.black `on` V.white)
-    [ (themeMiss,  bg V.red)
+    [ (themeMiss,  bg $ V.rgbColor 255 150 150)
     , (themeMatch, fg $ V.rgbColor 50 50 50)
     ]
 themeMiss  = attrName "miss"
