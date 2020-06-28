@@ -41,9 +41,9 @@ keyHandler s _                                   = continue s
 
 drawFunction :: Session -> [Widget ()]
 drawFunction s =
-    let applyTheme c (Just True)  = withAttr themeMatch $ str [c]
-        applyTheme c (Just False) = withAttr themeMiss  $ str [c]
-        applyTheme c Nothing      = showCursor () (Location (0, 0)) (str [c])
+    let applyTheme s (Just True)  = withAttr themeMatch $ str s
+        applyTheme s (Just False) = withAttr themeMiss  $ str s
+        applyTheme s Nothing      = showCursor () (Location (0, 0)) (str s)
     in [withBorderStyle unicode $ borderWithLabel (str "Haskell Typist") $ center
         $ foldr (<+>) emptyWidget (renderKeystrokes s applyTheme)]
 

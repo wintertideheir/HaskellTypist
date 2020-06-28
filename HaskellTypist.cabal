@@ -23,6 +23,7 @@ executable HaskellTypist
   ghc-options: -threaded
   build-depends:       base >=4.11 && <4.12,
                        brick,
-                       vty
+                       vty,
+                       extra
   hs-source-dirs:      src
   default-language:    Haskell2010

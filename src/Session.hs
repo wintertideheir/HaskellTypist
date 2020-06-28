@@ -1,6 +1,7 @@
 module Session where
 
 import qualified System.CPUTime (getCPUTime)
+import qualified Data.List.Extra (groupOn)
 
 data Session = Session { keystrokes :: [(Integer, Char)]
                        , text       :: String
@@ -21,9 +22,10 @@ recordKeystroke s c =
         t <- System.CPUTime.getCPUTime
         return s { keystrokes = (keystrokes s) ++ [(t, c)] }
 
-renderKeystrokes :: Session -> (Char -> Maybe Bool -> a) -> [a]
+renderKeystrokes :: Session -> (String -> Maybe Bool -> a) -> [a]
 renderKeystrokes s t =
-    let matched    = zip (map snd (keystrokes s)) (text s)
-        complete   = map (\x -> t (snd x) (Just ((fst x) == (snd x)))) matched
-        incomplete = map (\x -> t x Nothing)                           (drop (length $ keystrokes s) $ text s)
-    in complete ++ incomplete
+    let twin (x,y) = x == y
+        matched    = Data.List.Extra.groupOn twin (zip (map snd $ keystrokes s) (text s))
+        complete   = map (\g -> t (map fst g) (Just (twin $ head g))) matched
+        incomplete = t (drop (length $ keystrokes s) $ text s) Nothing
+    in complete ++ [incomplete]
