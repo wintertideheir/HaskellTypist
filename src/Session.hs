@@ -2,14 +2,32 @@ module Session where
 
 import qualified System.CPUTime (getCPUTime)
 import qualified Data.List.Extra (groupOn)
+import qualified Data.List.Split (splitOneOf)
 
 data Session = Session { keystrokes :: [(Integer, Char)]
                        , text       :: String
                        }
 
+maximumTextWidth :: Int
+maximumTextWidth = 70
+
+whitespaceASCII :: [Char]
+whitespaceASCII = [' ','\t','\n','\r','\v','\f']
+
 sessionFromText :: String -> Session
 sessionFromText t = Session { keystrokes = []
                             , text       = t  }
+
+sessionsFromText :: String -> [Session]
+sessionsFromText s =
+    let combineChunks [] y     = [y]
+        combineChunks (x:xs) y = if maximumTextWidth < (length (x ++ " " ++ y))
+                                 then y:x:xs
+                                 else (x ++ " " ++ y):xs
+    in map sessionFromText
+       $ foldl combineChunks []
+       $ filter (not . null)
+       $ Data.List.Split.splitOneOf whitespaceASCII s
 
 completeSession :: Session -> Bool
 completeSession s = (length $ keystrokes s) >= (length $ text s)
