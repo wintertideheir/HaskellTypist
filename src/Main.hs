@@ -12,10 +12,13 @@ import Brick.Widgets.Border.Style
 import qualified Graphics.Vty as V
 
 initialSession :: Session
-initialSession = sessionFromText "Gallia est omnis divisa in partes tres, \
-                                 \quarum unam incolunt Belgae, aliam Aquitani, \
-                                 \tertiam qui ipsorum lingua Celtae, \
-                                 \nostra Galli appellantur."
+initialSession = sessionFromText "Gallia est omnis divisa in partes tres, quarum \
+                                 \unam incolunt Belgae, aliam Aquitani, tertiam qui \
+                                 \ipsorum lingua Celtae, nostra Galli appellantur.\
+                                 \\n\
+                                 \Hi omnes lingua, institutis, legibus inter se \
+                                 \differunt. Gallos ab Aquitanis Garumna flumen, a \
+                                 \Belgis Matrona et Sequana dividit."
 
 themes     :: AttrMap
 themeMiss  :: AttrName
@@ -44,8 +47,12 @@ drawFunction s =
     let applyTheme s (Just True)  = withAttr themeMatch $ str s
         applyTheme s (Just False) = withAttr themeMiss  $ str s
         applyTheme s Nothing      = showCursor () (Location (0, 0)) (str s)
-    in [withBorderStyle unicode $ borderWithLabel (str "Haskell Typist") $ center
-        $ foldr (<+>) emptyWidget (renderKeystrokes s applyTheme)]
+    in [withBorderStyle unicode
+        $ borderWithLabel (str "Haskell Typist")
+        $ center
+        $ vBox
+        $ map vBox
+        $ map (map hBox) (renderKeystrokes s applyTheme)]
 
 main :: IO Session
 main = defaultMain app initialSession
