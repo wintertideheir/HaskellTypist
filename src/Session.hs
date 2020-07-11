@@ -2,7 +2,6 @@ module Session where
 
 import qualified System.CPUTime (getCPUTime)
 import qualified Data.List.Extra (groupOn)
-import qualified Data.List.Split (split, whenElt, keepDelimsR, chunksOf)
 
 data Session = Session { keystrokes :: [(Integer, Char)]
                        , text       :: String
@@ -25,18 +24,23 @@ recordKeystroke s c =
 
 renderKeystrokes :: Session -> (String -> Maybe Bool -> a) -> [[a]]
 renderKeystrokes s t =
-    let remainingLength = (length $ text s) - (length $ keystrokes s)
-        matchTuple '\n' (Just g) = ('\n', Just ('\n' == g))
-        matchTuple e    (Just g) = (g,    Just (e    == g))
-        matchTuple e    Nothing  = (e,    Nothing)
+    let zipKeystrokes (k:ks) ('\n':ts) = ('\n', Just (k == '\n')) : zipKeystrokes ks ts
+        zipKeystrokes (k:ks) (t   :ts) = (k,    Just (k == t))    : zipKeystrokes ks ts
+        zipKeystrokes []     (t   :ts) = (t,    Nothing)          : zipKeystrokes [] ts
+        zipKeystrokes []     []        = []
+
+        lineShouldEnd line ' '  = length line > 50
+        lineShouldEnd _    '\n' = True
+        lineShouldEnd _    _    = False
+
+        stackReadable []           cm = [[cm]]
+        stackReadable (line:lines) cm =
+            if lineShouldEnd line (fst cm)
+            then []:(cm:line):lines
+            else    (cm:line):lines
     in map (map (\g -> t (map fst g) (snd $ head g)))
        $ map (Data.List.Extra.groupOn snd)
-       $ concat
-       $ map (Data.List.Split.chunksOf 50)
-       $ (Data.List.Split.split .
-          Data.List.Split.keepDelimsR .
-          Data.List.Split.whenElt)
-         ((== '\n') . fst)
-       $ zipWith matchTuple (text s)
-       $ (map Just $ map snd $ keystrokes s) ++
-         (replicate remainingLength Nothing)
+       $ reverse
+       $ map reverse
+       $ foldl stackReadable []
+       $ zipKeystrokes (map snd $ keystrokes s) (text s)
