@@ -7,16 +7,16 @@ data Session = Session { keystrokes :: [(Integer, Char)]
                        , text       :: String
                        }
 
-sessionFromText :: String -> Session
-sessionFromText t = Session { keystrokes = []
-                            , text       = t  }
+sessionFromString :: String -> Session
+sessionFromString t = Session { keystrokes = []
+                              , text       = t  }
 
-completeSession :: Session -> Bool
-completeSession s = (length $ keystrokes s) >= (length $ text s)
+sessionComplete :: Session -> Bool
+sessionComplete s = (length $ keystrokes s) >= (length $ text s)
 
 recordKeystroke :: Session -> Char -> IO Session
 recordKeystroke s c =
-    if completeSession s
+    if sessionComplete s
     then return s
     else do
         t <- System.CPUTime.getCPUTime
