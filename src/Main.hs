@@ -3,6 +3,7 @@ module Main where
 import Session
 
 import Control.Monad.IO.Class (liftIO)
+import Data.List (find)
 
 import Brick
 import Brick.Types
@@ -42,17 +43,20 @@ initialSession = sessionFromString "Gallia est omnis divisa in partes tres, quar
 themes       :: AttrMap
 themeMiss    :: AttrName
 themeMatch   :: AttrName
-themeNewline :: AttrName
+themeNormal  :: AttrName
+themeSpecial :: AttrName
 themes = attrMap (V.black `on` V.white)
-    [ (themeMiss,                  bg $ V.rgbColor 255 150 150)
-    , (themeMatch,                 fg $ V.rgbColor  50  50  50)
-    , (themeNewline,               V.white `on` V.black)
-    , (themeNewline <> themeMiss,  fg $ V.rgbColor 255  50  50)
-    , (themeNewline <> themeMatch, bg $ V.rgbColor 150 150 150)
+    [ (themeNormal,                V.black `on` V.white)
+    , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
+    , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
+    , (themeSpecial,               V.white `on` V.black)
+    , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
+    , (themeSpecial <> themeMatch, bg $ V.rgbColor 150 150 150)
     ]
 themeMiss    = attrName "miss"
 themeMatch   = attrName "match"
-themeNewline = attrName "newline"
+themeNormal  = attrName "normal"
+themeSpecial = attrName "special"
 
 app :: App Session () ()
 app = App { appDraw         = drawFunction
@@ -69,22 +73,24 @@ keyHandler s _                                   = continue s
 
 drawFunction :: Session -> [Widget ()]
 drawFunction s =
-    let applyTheme s m =
-            if last s == '\n'
-            then applyThemeSafe (init s) m <+> themedNewline m
-            else applyThemeSafe s        m
-        applyThemeSafe s (Just True)  = withAttr themeMatch                   $ str s
-        applyThemeSafe s (Just False) = withAttr themeMiss                    $ str s
-        applyThemeSafe s Nothing      = showCursor () (Location (0, 0))       $ str s
-        themedNewline    (Just True)  = withAttr (themeNewline <> themeMatch) $ str "\\n"
-        themedNewline    (Just False) = withAttr (themeNewline <> themeMiss)  $ str "\\n"
-        themedNewline    Nothing      = showCursor () (Location (0, 0))
-                                      $ withAttr themeNewline                 $ str "\\n"
+    let checkedLines = sessionCheckedLines s
+        normalLines = vBox
+                    $ map hBox
+                    $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))
+                    $ checkedLines
+        specialLines = vBox
+                     $ map (\l -> case find (elem '\n' . fst) l of
+                                  (Just a) -> applyTheme themeSpecial "\\n" (snd a)
+                                  Nothing  -> applyTheme themeNormal  " "   Nothing)
+                     $ checkedLines
+        applyTheme t s (Just True)  = withAttr (t <> themeMatch) $ str s
+        applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
+        applyTheme t s Nothing      = showCursor () (Location (0, 0))
+                                    $ withAttr t                 $ str s
     in [withBorderStyle unicode
         $ borderWithLabel (str "Haskell Typist")
         $ center
-        $ vBox
-        $ map hBox (renderKeystrokes s applyTheme)]
+        $ (normalLines <+> specialLines)]
 
 main :: IO Session
 main = defaultMain app initialSession

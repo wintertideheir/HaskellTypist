@@ -22,10 +22,10 @@ recordKeystroke s c =
         t <- System.CPUTime.getCPUTime
         return s { keystrokes = (keystrokes s) ++ [(t, c)] }
 
-renderKeystrokes :: Session -> (String -> Maybe Bool -> a) -> [[a]]
-renderKeystrokes s t =
-    let zipKeystrokes (k:ks) ('\n':ts) = ('\n', Just (k == '\n')) : zipKeystrokes ks ts
-        zipKeystrokes (k:ks) (t   :ts) = (k,    Just (k == t))    : zipKeystrokes ks ts
+sessionCheckedLines :: Session -> [[(String, Maybe Bool)]]
+sessionCheckedLines Session { keystrokes = k
+                            , text       = t } =
+    let zipKeystrokes (k:ks) (t   :ts) = (t,    Just (k == t))    : zipKeystrokes ks ts
         zipKeystrokes []     (t   :ts) = (t,    Nothing)          : zipKeystrokes [] ts
         zipKeystrokes []     []        = []
 
@@ -33,14 +33,15 @@ renderKeystrokes s t =
         lineShouldEnd _    '\n' = True
         lineShouldEnd _    _    = False
 
-        stackReadable []           cm = [[cm]]
-        stackReadable (line:lines) cm =
+        stackReadable = reverse
+                      . map reverse
+                      . foldl stackReadable' []
+        stackReadable' []           cm = [[cm]]
+        stackReadable' (line:lines) cm =
             if lineShouldEnd line (fst cm)
             then []:(cm:line):lines
             else    (cm:line):lines
-    in map (map (\g -> t (map fst g) (snd $ head g)))
+    in map (map (\g -> (map fst g, snd $ head g)))
        $ map (Data.List.Extra.groupOn snd)
-       $ reverse
-       $ map reverse
-       $ foldl stackReadable []
-       $ zipKeystrokes (map snd $ keystrokes s) (text s)
+       $ stackReadable
+       $ zipKeystrokes (map snd k) t
