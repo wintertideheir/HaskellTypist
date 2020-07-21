@@ -49,9 +49,9 @@ themes = attrMap (V.black `on` V.white)
     [ (themeNormal,                V.black `on` V.white)
     , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
     , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
-    , (themeSpecial,               V.white `on` V.black)
+    , (themeSpecial,               bg $ V.rgbColor 200 200 200)
     , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
-    , (themeSpecial <> themeMatch, bg $ V.rgbColor 150 150 150)
+    , (themeSpecial <> themeMatch, fg $ V.rgbColor 150 150 150)
     ]
 themeMiss    = attrName "miss"
 themeMatch   = attrName "match"
@@ -79,9 +79,10 @@ drawFunction s =
                     $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))
                     $ checkedLines
         specialLines = vBox
-                     $ map (\l -> case find (elem '\n' . fst) l of
-                                  (Just a) -> applyTheme themeSpecial "\\n" (snd a)
-                                  Nothing  -> applyTheme themeNormal  " "   Nothing)
+                     $ map (\(s, m) -> case last s of
+                                       '\n' -> applyTheme themeSpecial "\\n" m
+                                       _    -> applyTheme themeSpecial "<-"  m)
+                     $ map last
                      $ checkedLines
         applyTheme t s (Just True)  = withAttr (t <> themeMatch) $ str s
         applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
