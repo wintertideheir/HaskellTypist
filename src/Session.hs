@@ -11,20 +11,22 @@ data PassageFragment = PassageTextFragment String
 
 -- |A complete passage, with it's identifier, name,
 -- and list of fragments.
-data Passage = Passage { passageId        :: Int,
-                         passageName      :: String,
-                         passageDate      :: UTCTime,
-                         passageFragments :: [PassageFragment]}
+data Passage = Passage { passageId        :: Int
+                       , passageName      :: String
+                       , passageDate      :: UTCTime
+                       , passageFragments :: [PassageFragment]
+                       }
 
 -- |A session preset, composed of it's identifier, name,
 -- a list of passage and fragment indicies, and previous
 -- session data. Passage identifiers with an empty list are
 -- interpreted as including the entire passage.
-data SessionPreset = SessionPreset { sessionId        :: Int,
-                                     sessionName      :: String,
-                                     sesionTime       :: UTCTime,
-                                     sessionFragments :: [(Int, [Int])],
-                                     sessionPrevious  :: [Session] }
+data SessionPreset = SessionPreset { sessionId        :: Int
+                                   , sessionName      :: String
+                                   , sessionTime      :: UTCTime
+                                   , sessionFragments :: [(Int, [Int])]
+                                   , sessionPrevious  :: [Session]
+                                   }
 
 -- |A typing session, which is a list of typed characters and
 -- their time in picoseconds.

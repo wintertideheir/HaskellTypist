@@ -63,7 +63,8 @@ app = App { appDraw         = drawFunction
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = keyHandler
           , appStartEvent   = return
-          , appAttrMap      = const themes }
+          , appAttrMap      = const themes
+          }
 
 keyHandler :: Session -> BrickEvent () () -> EventM () (Next Session)
 keyHandler s (VtyEvent (V.EvKey V.KEsc []))      = halt s
