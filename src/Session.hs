@@ -3,6 +3,7 @@ module Session where
 import qualified System.CPUTime (getCPUTime)
 import qualified Data.List.Extra (groupOn)
 import qualified Data.Audio (Audio)
+import qualified Data.Time.LocalTime (UTCTime)
 
 -- |A fragment, often a sentence, of a passage.
 data PassageFragment = PassageTextFragment String
@@ -11,7 +12,8 @@ data PassageFragment = PassageTextFragment String
 -- |A complete passage, with it's identifier, name,
 -- and list of fragments.
 data Passage = Passage { passageId        :: Int,
-                         passageName      :: String
+                         passageName      :: String,
+                         passageDate      :: UTCTime,
                          passageFragments :: [PassageFragment]}
 
 -- |A session preset, composed of it's identifier, name,
@@ -19,13 +21,14 @@ data Passage = Passage { passageId        :: Int,
 -- session data. Passage identifiers with an empty list are
 -- interpreted as including the entire passage.
 data SessionPreset = SessionPreset { sessionId        :: Int,
-                                     sessionNam       :: String,
+                                     sessionName      :: String,
+                                     sesionTime       :: UTCTime,
                                      sessionFragments :: [(Int, [Int])],
                                      sessionPrevious  :: [Session] }
 
 -- |A typing session, which is a list of typed characters and
 -- their time in picoseconds.
-data Session = Session [(Integer, Char)]
+data Session = Session UTCTime [(Integer, Char)]
 
 data TypistData = TypistData [Passage] [SessionPreset]
 
