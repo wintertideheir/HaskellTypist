@@ -3,7 +3,7 @@ module Session where
 import qualified System.CPUTime (getCPUTime)
 import qualified Data.List.Extra (groupOn)
 import qualified Data.Audio (Audio)
-import qualified Data.Time.LocalTime (UTCTime)
+import qualified Data.Time.Clock (UTCTime, getCurrentTime)
 
 -- |A fragment, often a sentence, of a passage.
 data PassageFragment = PassageTextFragment String
@@ -13,7 +13,7 @@ data PassageFragment = PassageTextFragment String
 -- and list of fragments.
 data Passage = Passage { passageId        :: Int
                        , passageName      :: String
-                       , passageDate      :: UTCTime
+                       , passageDate      :: Data.Time.Clock.UTCTime
                        , passageFragments :: [PassageFragment]
                        }
 
@@ -23,16 +23,64 @@ data Passage = Passage { passageId        :: Int
 -- interpreted as including the entire passage.
 data SessionPreset = SessionPreset { sessionId        :: Int
                                    , sessionName      :: String
-                                   , sessionTime      :: UTCTime
+                                   , sessionDate      :: Data.Time.Clock.UTCTime
                                    , sessionFragments :: [(Int, [Int])]
                                    , sessionPrevious  :: [Session]
                                    }
 
 -- |A typing session, which is a list of typed characters and
 -- their time in picoseconds.
-data Session = Session UTCTime [(Integer, Char)]
+data Session = Session Data.Time.Clock.UTCTime [(Integer, Char)]
 
 data TypistData = TypistData [Passage] [SessionPreset]
+
+-- |Constructor for a passage in a 'TypistData'
+-- given its name and list of fragments. Will
+-- assign the smallest unique, nonnegative
+-- integer identifier, and fails through 'head'
+-- otherwise. Records the date of creation through
+-- 'Data.Time.Clock.getCurrentTime'.
+addPassage :: TypistData -> String -> [PassageFragment] -> IO TypistData
+addPassage (TypistData ps sps) name pfs =
+    do t <- Data.Time.Clock.getCurrentTime
+       let p = Passage { passageId        = head ([0..(maxBound :: Int)] \\ (map passageId ps))
+                       , passageName      = name
+                       , passageDate      = t
+                       , passageFragments = pfs
+                       }
+       TypistData p:ps sps
+
+-- |Constructor for a session preset in a
+-- 'TypistData' given its name and list of session
+-- and fragment indices. Will assign the smallest
+-- unique, nonnegative integer identifier, and
+-- fails through 'head' otherwise. Records the date
+-- of creation through
+-- 'Data.Time.Clock.getCurrentTime'.
+addPreset :: TypistData -> String -> [(Int, [Int])] -> IO TypistData
+addPreset (TypistData ps sps) name sfs =
+    do t <- Data.Time.Clock.getCurrentTime
+       let sp = SessionPreset { sessionId        = head ([0..(maxBound :: Int)] \\ (map sessionId sps))
+                              , sessionName      = name
+                              , sessionDate      = t
+                              , sessionFragments = sfs
+                              , sessionPrevious  = []
+                              }
+       TypistData ps sp:sps
+
+-- |Appends a session to its session preset in a
+-- 'TypistData'. If the given session preset
+-- identifer does not exist, fails through
+-- incomplete pattern matching. Records the date of
+-- addition through
+-- 'Data.Time.Clock.getCurrentTime'.
+addSession :: TypistData -> Int -> [(Integer, Char)] -> IO TypistData
+addSession (TypistData ps sps) id ks =
+    do t <- Data.Time.Clock.getCurrentTime
+       let (sps1, (sp : sps2)) = IO break ((== id) . sessionId) sps
+           s = Session t ks
+           sp' = sp { sessionPrevious = s : sessionPrevious sp }
+       TypistData ps (sps1 ++ (sp':sps2))
 
 -------------------------------------------------------------
 -- TODO: Rewrite the below code to utilize the above types --
