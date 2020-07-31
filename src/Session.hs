@@ -92,7 +92,7 @@ addPreset (TypistData ps sps) name sfs =
 addSession :: TypistData -> Int -> [(Integer, Char)] -> IO TypistData
 addSession (TypistData ps sps) id ks =
     do t <- Data.Time.Clock.getCurrentTime
-       let (sps1, (sp : sps2)) = IO break ((== id) . sessionId) sps
+       let (sps1, (sp : sps2)) = break ((== id) . sessionId) sps
            s = Session t ks
            sp' = sp { sessionPrevious = s : sessionPrevious sp }
        TypistData ps (sps1 ++ (sp':sps2))
