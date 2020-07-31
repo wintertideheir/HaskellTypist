@@ -1,13 +1,28 @@
 module Session where
 
 import qualified System.CPUTime (getCPUTime)
-import qualified Data.List.Extra (groupOn)
+import qualified Data.List.Extra (groupOn, takeEnd)
 import qualified Data.Audio (Audio)
 import qualified Data.Time.Clock (UTCTime, getCurrentTime)
 
 -- |A fragment, often a sentence, of a passage.
 data PassageFragment = PassageTextFragment String
                      | PassageAudioFragment String (Data.Audio.Audio Float)
+
+-- |Decide if typing input completes a fragment. If the fragment is a
+-- 'PassageTextFragment', return when the input is as least as long as
+-- the fragment. If the fragment is a 'PassageAudioFragment', compare
+-- the last three characters at 110% the fragment length and return
+-- 'True' at 115% the fragment length.
+fragmentComplete :: PassageFragment -> String -> Bool
+fragmentComplete (PassageTextFragment  f)   s = (length s) >= (length f)
+fragmentComplete (PassageAudioFragment f _) s =
+    let fLen   = fromIntegral $ length f
+        sLen   = fromIntegral $ length s
+        relLen = (fLen - sLen) / fLen
+        cond1  = relLen < 1.1  && (takeEnd 3 f == takeEnd 3 s)
+        cond2  = relLen > 1.15
+    in cond1 || cond2
 
 -- |A complete passage, with it's identifier, name,
 -- and list of fragments.
