@@ -1,28 +1,50 @@
 module Session where
 
 import qualified System.CPUTime (getCPUTime)
-import qualified Data.List.Extra (groupOn, takeEnd)
+import qualified Data.List.Extra (groupOn)
 import qualified Data.Audio (Audio)
 import qualified Data.Time.Clock (UTCTime, getCurrentTime)
+import qualified Data.Text.Metrics (damerauLevenshteinNorm)
 
 -- |A fragment, often a sentence, of a passage.
 data PassageFragment = PassageTextFragment String
                      | PassageAudioFragment String (Data.Audio.Audio Float)
 
--- |Decide if typing input completes a fragment. If the fragment is a
--- 'PassageTextFragment', return when the input is as least as long as
--- the fragment. If the fragment is a 'PassageAudioFragment', compare
--- the last three characters at 110% the fragment length and return
--- 'True' at 115% the fragment length.
-fragmentComplete :: PassageFragment -> String -> Bool
-fragmentComplete (PassageTextFragment  f)   s = (length s) >= (length f)
-fragmentComplete (PassageAudioFragment f _) s =
-    let fLen   = fromIntegral $ length f
-        sLen   = fromIntegral $ length s
-        relLen = (fLen - sLen) / fLen
-        cond1  = relLen < 1.1  && (takeEnd 3 f == takeEnd 3 s)
-        cond2  = relLen > 1.15
-    in cond1 || cond2
+{-|
+    Consume a fragment from typed input. Taking a 'PassageFragment' and
+    a 'String', render a list of characters with a possible normalized
+    score.
+
+    If the fragment is a 'PassageTextFragment', compare each typed
+    character to the fragment and score it, rendering the entire fragment.
+
+    If the fragment is a 'PassageAudioFragment', first decide whether
+    the fragment is complete when the typed input is at least as long as
+    the fragment itself, by checking if the string metric improves with
+    consuming more characters. If a 'PassageAudioFragment' is complete,
+    then render the fragment with it's string metrics, otherwise return
+    the typed input.
+
+    'consumeFragment' is the foundation for a consumer based input
+    processing system where determining completeness is handled by
+    detecting changed in rendered output.
+-}
+consumeFragment :: PassageFragment -> String -> [(Char, Maybe Float)]
+consumeFragment (PassageTextFragment  [])     _ = []
+consumeFragment (PassageTextFragment  (f:fs)) [] =
+    map (f, Nothing) : consumeFragment (PassageTextFragment fs) []
+consumeFragment (PassageTextFragment  (f:fs)) (s:ss) =
+    if f == s
+    then (f, Just 1.0) : consumeFragment (PassageTextFragment fs) ss
+    else (f, Just 0.0) : consumeFragment (PassageTextFragment fs) ss
+consumeFragment (PassageAudioFragment f _) s =
+    let subMetric l = Data.Text.Metrics.damerauLevenshteinNorm (pack (take l s)) (pack f)
+        decideMetric' l = if l >= length s
+                          then map (\x -> (x, Nothing)) s
+                          else if subMetric l >= subMetric (l+1)
+                               then map (\x -> (x, subMetric (l+1))) f
+                               else decideMetric' (l+1)
+    in decideMetric' (length f)
 
 -- |A complete passage, with it's identifier, name,
 -- and list of fragments.

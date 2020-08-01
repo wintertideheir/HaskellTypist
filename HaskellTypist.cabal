@@ -22,6 +22,7 @@ executable HaskellTypist
                        vty,
                        extra,
                        time,
-                       HCodecs
+                       HCodecs,
+                       text-metrics
   hs-source-dirs:      src
   default-language:    Haskell2010
