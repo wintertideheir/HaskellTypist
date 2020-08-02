@@ -15,6 +15,10 @@ data PassageFragment = PassageTextFragment String
     a 'String', render a list of characters with a possible normalized
     score.
 
+    There should be a string s such that
+    > consumeFragment s == consumeFragment (s ++ s')
+    for any string s'. The string s \"completes\" the fragment.
+
     If the fragment is a 'PassageTextFragment', compare each typed
     character to the fragment and score it, rendering the entire fragment.
 
@@ -24,10 +28,6 @@ data PassageFragment = PassageTextFragment String
     consuming more characters. If a 'PassageAudioFragment' is complete,
     then render the fragment with it's string metrics, otherwise return
     the typed input.
-
-    'consumeFragment' is the foundation for a consumer based input
-    processing system where determining completeness is handled by
-    detecting changed in rendered output.
 -}
 consumeFragment :: PassageFragment -> String -> [(Char, Maybe Float)]
 consumeFragment (PassageTextFragment  [])     _ = []
@@ -45,6 +45,27 @@ consumeFragment (PassageAudioFragment f _) s =
                                then map (\x -> (x, subMetric (l+1))) f
                                else decideMetric' (l+1)
     in decideMetric' (length f)
+
+{-|
+    Consume a number of fragments.
+
+    Repeatedly feeds substrings of the given typed input to the list of
+    fragments in order, moving to the next fragment when the output of
+    consumption doesn't change for a given substring length, then
+    concatenating the output.
+
+    The input string is treated as a substring of the concatenation of
+    substrings that complete each fragment in the given list. 
+-}
+consumeFragments :: [PassageFragment] -> String -> [(Char, Maybe Float)]
+consumeFragments pfs "" = concat [consumeFragment pf "" | pf <- pfs]
+consumeFragments pfs s  =
+    let consumeFragments' pfs' "" _ = consumeFragments pfs' ""
+        consumeFragments' (pf':pfs') s' l =
+            if consumeFragment pf' (take l s') == consumeFragment pf' (take (l+1) s')
+            then (consumeFragment pf' (take l s')) ++ (consumeFragments' pfs' (drop l s') 0)
+            else consumeFragments' (pf':pfs') s' (l+1)
+    in consumeFragments' pfs s 0
 
 -- |A complete passage, with it's identifier, name,
 -- and list of fragments.
