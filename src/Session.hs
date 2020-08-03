@@ -158,11 +158,13 @@ addSession (TypistData ps sps) id ks =
        return (TypistData ps (sps1 ++ (sp':sps2)))
 
 -- |Retrive a list of passage fragments from different passages given the
--- passage and fragments indices. Out of bounds indices are simply
--- discarded.
+-- passage identifiers and fragments indices. Out of bounds indices and
+-- identifers are simply discarded.
 subPassages :: TypistData -> [(Int, [Int])] -> [PassageFragment]
 subPassages (TypistData p _) ids =
-    concat
-    $ map (\(p',pf') -> subPassage (p !! p') pf')
-    $ filter ((>= 0) . fst)
-    $ filter ((< length p) . fst) ids
+    let subPassages' []           = []
+        subPassages' ((x1,x2):xs) =
+            case Data.List.find ((== x1) . passageId) p of
+                Nothing ->                     (subPassages' xs)
+                Just j  -> (subPassage j x2) : (subPassages' xs)
+    in concat $ subPassages' ids
