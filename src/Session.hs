@@ -75,10 +75,17 @@ data Passage = Passage { passageId        :: Int
                        , passageFragments :: [PassageFragment]
                        }
 
+-- |Retrive a list of passage fragments given their indices. Out of
+-- bounds indices are simply discarded.
+subPassage :: Passage -> [Int] -> [PassageFragment]
+subPassage p i =
+    map ((passageFragments p) !!)
+    $ filter (>= 0)
+    $ filter (< length (passageFragments p)) i
+
 -- |A session preset, composed of it's identifier, name,
 -- a list of passage and fragment indicies, and previous
--- session data. Passage identifiers with an empty list are
--- interpreted as including the entire passage.
+-- session data.
 data SessionPreset = SessionPreset { sessionId        :: Int
                                    , sessionName      :: String
                                    , sessionDate      :: Data.Time.Clock.UTCTime
@@ -139,6 +146,16 @@ addSession (TypistData ps sps) id ks =
            s = Session t ks
            sp' = sp { sessionPrevious = s : sessionPrevious sp }
        TypistData ps (sps1 ++ (sp':sps2))
+
+-- |Retrive a list of passage fragments from different passages given the
+-- passage and fragments indices. Out of bounds indices are simply
+-- discarded.
+subPassages :: TypistData -> [(Int, [Int])] -> [PassageFragment]
+subPassages (TypistData p _) ids =
+    concat
+    $ map (\(p',pf') -> subPassage (p !! p') pf')
+    $ filter ((>= 0) . fst) ids
+    $ filter ((< length p) . fst) ids
 
 -------------------------------------------------------------
 -- TODO: Rewrite the below code to utilize the above types --
