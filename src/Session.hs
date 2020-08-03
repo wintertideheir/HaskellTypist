@@ -1,9 +1,12 @@
 module Session where
 
-import qualified System.CPUTime (getCPUTime)
-import qualified Data.List.Extra (groupOn)
-import qualified Data.Audio (Audio)
-import qualified Data.Time.Clock (UTCTime, getCurrentTime)
+import qualified System.CPUTime    (getCPUTime)
+import qualified Data.List.Extra   (groupOn)
+import qualified Data.Audio        (Audio)
+import qualified Data.Time.Clock   (UTCTime, getCurrentTime)
+import qualified Data.Ratio        (numerator, denominator)
+import qualified Data.Text         (pack)
+import qualified Data.List
 import qualified Data.Text.Metrics (damerauLevenshteinNorm)
 
 -- |A fragment, often a sentence, of a passage.
@@ -30,19 +33,22 @@ data PassageFragment = PassageTextFragment String
     the typed input.
 -}
 consumeFragment :: PassageFragment -> String -> [(Char, Maybe Float)]
-consumeFragment (PassageTextFragment  [])     _ = []
-consumeFragment (PassageTextFragment  (f:fs)) [] =
-    map (f, Nothing) : consumeFragment (PassageTextFragment fs) []
-consumeFragment (PassageTextFragment  (f:fs)) (s:ss) =
+consumeFragment (PassageTextFragment [])     _      = []
+consumeFragment (PassageTextFragment f)      []     = [(f', Nothing) | f' <- f]
+consumeFragment (PassageTextFragment (f:fs)) (s:ss) =
     if f == s
     then (f, Just 1.0) : consumeFragment (PassageTextFragment fs) ss
     else (f, Just 0.0) : consumeFragment (PassageTextFragment fs) ss
 consumeFragment (PassageAudioFragment f _) s =
-    let subMetric l = Data.Text.Metrics.damerauLevenshteinNorm (pack (take l s)) (pack f)
+    let subMetric l = fromRational
+                      $ toRational
+                      $ Data.Text.Metrics.damerauLevenshteinNorm
+                        (Data.Text.pack (take l s))
+                        (Data.Text.pack f)
         decideMetric' l = if l >= length s
                           then map (\x -> (x, Nothing)) s
                           else if subMetric l >= subMetric (l+1)
-                               then map (\x -> (x, subMetric (l+1))) f
+                               then map (\x -> (x, Just (subMetric (l+1)))) f
                                else decideMetric' (l+1)
     in decideMetric' (length f)
 
@@ -108,12 +114,14 @@ data TypistData = TypistData [Passage] [SessionPreset]
 addPassage :: TypistData -> String -> [PassageFragment] -> IO TypistData
 addPassage (TypistData ps sps) name pfs =
     do t <- Data.Time.Clock.getCurrentTime
-       let p = Passage { passageId        = head ([0..(maxBound :: Int)] \\ (map passageId ps))
+       let p = Passage { passageId        = head ([0..(maxBound :: Int)]
+                                                  Data.List.\\
+                                                  (map passageId ps))
                        , passageName      = name
                        , passageDate      = t
                        , passageFragments = pfs
                        }
-       TypistData p:ps sps
+       return (TypistData (p:ps) sps)
 
 -- |Constructor for a session preset in a
 -- 'TypistData' given its name and list of session
@@ -125,13 +133,15 @@ addPassage (TypistData ps sps) name pfs =
 addPreset :: TypistData -> String -> [(Int, [Int])] -> IO TypistData
 addPreset (TypistData ps sps) name sfs =
     do t <- Data.Time.Clock.getCurrentTime
-       let sp = SessionPreset { sessionId        = head ([0..(maxBound :: Int)] \\ (map sessionId sps))
+       let sp = SessionPreset { sessionId        = head ([0..(maxBound :: Int)]
+                                                         Data.List.\\
+                                                         (map sessionId sps))
                               , sessionName      = name
                               , sessionDate      = t
                               , sessionFragments = sfs
                               , sessionPrevious  = []
                               }
-       TypistData ps sp:sps
+       return (TypistData ps (sp:sps))
 
 -- |Appends a session to its session preset in a
 -- 'TypistData'. If the given session preset
@@ -145,7 +155,7 @@ addSession (TypistData ps sps) id ks =
        let (sps1, (sp : sps2)) = break ((== id) . sessionId) sps
            s = Session t ks
            sp' = sp { sessionPrevious = s : sessionPrevious sp }
-       TypistData ps (sps1 ++ (sp':sps2))
+       return (TypistData ps (sps1 ++ (sp':sps2)))
 
 -- |Retrive a list of passage fragments from different passages given the
 -- passage and fragments indices. Out of bounds indices are simply
@@ -154,44 +164,5 @@ subPassages :: TypistData -> [(Int, [Int])] -> [PassageFragment]
 subPassages (TypistData p _) ids =
     concat
     $ map (\(p',pf') -> subPassage (p !! p') pf')
-    $ filter ((>= 0) . fst) ids
+    $ filter ((>= 0) . fst)
     $ filter ((< length p) . fst) ids
-
--------------------------------------------------------------
--- TODO: Rewrite the below code to utilize the above types --
--------------------------------------------------------------
-
-sessionComplete :: Session -> Bool
-sessionComplete s = (length $ keystrokes s) >= (length $ text s)
-
-recordKeystroke :: Session -> Char -> IO Session
-recordKeystroke s c =
-    if sessionComplete s
-    then return s
-    else do
-        t <- System.CPUTime.getCPUTime
-        return s { keystrokes = (keystrokes s) ++ [(t, c)] }
-
-sessionCheckedLines :: Session -> [[(String, Maybe Bool)]]
-sessionCheckedLines Session { keystrokes = k
-                            , text       = t } =
-    let zipKeystrokes (k:ks) (t   :ts) = (t,    Just (k == t))    : zipKeystrokes ks ts
-        zipKeystrokes []     (t   :ts) = (t,    Nothing)          : zipKeystrokes [] ts
-        zipKeystrokes []     []        = []
-
-        lineShouldEnd line ' '  = length line > 50
-        lineShouldEnd _    '\n' = True
-        lineShouldEnd _    _    = False
-
-        stackReadable = reverse
-                      . map reverse
-                      . foldl stackReadable' []
-        stackReadable' []           cm = [[cm]]
-        stackReadable' (line:lines) cm =
-            if lineShouldEnd line (fst cm)
-            then []:(cm:line):lines
-            else    (cm:line):lines
-    in map (map (\g -> (map fst g, snd $ head g)))
-       $ map (Data.List.Extra.groupOn snd)
-       $ stackReadable
-       $ zipKeystrokes (map snd k) t
