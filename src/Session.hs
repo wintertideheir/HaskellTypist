@@ -168,3 +168,11 @@ subPassages (TypistData p _) ids =
                 Nothing ->                     (subPassages' xs)
                 Just j  -> (subPassage j x2) : (subPassages' xs)
     in concat $ subPassages' ids
+
+-- |Consume a string based on a session preset identifer.
+consumePreset :: TypistData -> Int -> String -> [(Char, Maybe Float)]
+consumePreset td@(TypistData _ sps) id s =
+    case Data.List.find ((== id) . sessionId) sps of
+        Just sp -> consumeFragments (subPassages td
+                                     $ sessionFragments sp) s
+        Nothing -> []
