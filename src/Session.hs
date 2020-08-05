@@ -1,10 +1,8 @@
 module Session where
 
-import qualified System.CPUTime    (getCPUTime)
 import qualified Data.List.Extra   (groupOn)
 import qualified Data.Audio        (Audio)
 import qualified Data.Time.Clock   (UTCTime, getCurrentTime)
-import qualified Data.Ratio        (numerator, denominator)
 import qualified Data.Text         (pack)
 import qualified Data.List
 import qualified Data.Text.Metrics (damerauLevenshteinNorm)
@@ -45,6 +43,7 @@ consumeFragment (PassageAudioFragment f _) s =
                       $ Data.Text.Metrics.damerauLevenshteinNorm
                         (Data.Text.pack (take l s))
                         (Data.Text.pack f)
+                    :: Float
         decideMetric' l = if l >= length s
                           then map (\x -> (x, Nothing)) s
                           else if subMetric l >= subMetric (l+1)
@@ -67,6 +66,7 @@ consumeFragments :: [PassageFragment] -> String -> [(Char, Maybe Float)]
 consumeFragments pfs "" = concat [consumeFragment pf "" | pf <- pfs]
 consumeFragments pfs s  =
     let consumeFragments' pfs' "" _ = consumeFragments pfs' ""
+        consumeFragments' []   [] _ = []
         consumeFragments' (pf':pfs') s' l =
             if consumeFragment pf' (take l s') == consumeFragment pf' (take (l+1) s')
             then (consumeFragment pf' (take l s')) ++ (consumeFragments' pfs' (drop l s') 0)
@@ -150,9 +150,9 @@ addPreset (TypistData ps sps) name sfs =
 -- addition through
 -- 'Data.Time.Clock.getCurrentTime'.
 addSession :: TypistData -> Int -> [(Integer, Char)] -> IO TypistData
-addSession (TypistData ps sps) id ks =
+addSession (TypistData ps sps) identifer ks =
     do t <- Data.Time.Clock.getCurrentTime
-       let (sps1, (sp : sps2)) = break ((== id) . sessionId) sps
+       let (sps1, (sp : sps2)) = break ((== identifer) . sessionId) sps
            s = Session t ks
            sp' = sp { sessionPrevious = s : sessionPrevious sp }
        return (TypistData ps (sps1 ++ (sp':sps2)))
@@ -161,18 +161,18 @@ addSession (TypistData ps sps) id ks =
 -- passage identifiers and fragments indices. Out of bounds indices and
 -- identifers are simply discarded.
 subPassages :: TypistData -> [(Int, [Int])] -> [PassageFragment]
-subPassages (TypistData p _) ids =
+subPassages (TypistData p _) identifiers =
     let subPassages' []           = []
         subPassages' ((x1,x2):xs) =
             case Data.List.find ((== x1) . passageId) p of
                 Nothing ->                     (subPassages' xs)
                 Just j  -> (subPassage j x2) : (subPassages' xs)
-    in concat $ subPassages' ids
+    in concat $ subPassages' identifiers
 
--- |Consume a string based on a session preset identifer.
+-- |Consume a string based on a session preset identifier.
 consumePreset :: TypistData -> Int -> String -> [(Char, Maybe Float)]
-consumePreset td@(TypistData _ sps) id s =
-    case Data.List.find ((== id) . sessionId) sps of
+consumePreset td@(TypistData _ sps) identifier s =
+    case Data.List.find ((== identifier) . sessionId) sps of
         Just sp -> consumeFragments (subPassages td
                                      $ sessionFragments sp) s
         Nothing -> []
