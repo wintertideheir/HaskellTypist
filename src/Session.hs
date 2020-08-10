@@ -106,12 +106,12 @@ dereference (TypistData p _) (ReferencePart uid' i) =
 ----------------------------------------------------------------------
 
 {-|
-    Consume a fragment from typed input. Taking a 'Fragment' and
+    Render a fragment from typed input. Taking a 'Fragment' and
     a 'String', render a list of characters with a possible normalized
     score.
 
     There should be a string s such that
-    > consumeFragment s == consumeFragment (s ++ s')
+    > renderFragment s == renderFragment (s ++ s')
     for any string s'. The string s \"completes\" the fragment.
 
     If the fragment is a 'FragmentText', compare each typed
@@ -119,19 +119,19 @@ dereference (TypistData p _) (ReferencePart uid' i) =
 
     If the fragment is a 'FragmentAudio', first decide whether
     the fragment is complete when the typed input is at least as long as
-    the fragment itself, by checking if the string metric improves with
+    the fragment itself, then by checking if the string metric improves with
     consuming more characters. If a 'FragmentAudio' is complete,
     then render the fragment with it's string metrics, otherwise return
     the typed input.
 -}
-consumeFragment :: Fragment -> String -> [(Char, Maybe Float)]
-consumeFragment (FragmentText [])     _      = []
-consumeFragment (FragmentText f)      []     = [(f', Nothing) | f' <- f]
-consumeFragment (FragmentText (f:fs)) (s:ss) =
+renderFragment :: Fragment -> String -> [(Char, Maybe Float)]
+renderFragment (FragmentText [])     _      = []
+renderFragment (FragmentText f)      []     = [(f', Nothing) | f' <- f]
+renderFragment (FragmentText (f:fs)) (s:ss) =
     if f == s
-    then (f, Just 1.0) : consumeFragment (FragmentText fs) ss
-    else (f, Just 0.0) : consumeFragment (FragmentText fs) ss
-consumeFragment (FragmentAudio f _) s =
+    then (f, Just 1.0) : renderFragment (FragmentText fs) ss
+    else (f, Just 0.0) : renderFragment (FragmentText fs) ss
+renderFragment (FragmentAudio f _) s =
     let subMetric l = fromRational
                       $ toRational
                       $ Data.Text.Metrics.damerauLevenshteinNorm
@@ -146,7 +146,7 @@ consumeFragment (FragmentAudio f _) s =
     in decideMetric' (length f)
 
 {-|
-    Consume a number of fragments.
+    Render a number of fragments.
 
     Repeatedly feeds substrings of the given typed input to the list of
     fragments in order, moving to the next fragment when the output of
@@ -156,13 +156,13 @@ consumeFragment (FragmentAudio f _) s =
     The input string is treated as a substring of the concatenation of
     substrings that complete each fragment in the given list. 
 -}
-consumeFragments :: [Fragment] -> String -> [(Char, Maybe Float)]
-consumeFragments pfs "" = concat [consumeFragment pf "" | pf <- pfs]
-consumeFragments pfs s  =
-    let consumeFragments' pfs' "" _ = consumeFragments pfs' ""
-        consumeFragments' []   x  _ = zip x (repeat Nothing)
-        consumeFragments' (pf':pfs') s' l =
-            if consumeFragment pf' (take l s') == consumeFragment pf' (take (l+1) s')
-            then (consumeFragment pf' (take l s')) ++ (consumeFragments' pfs' (drop l s') 0)
-            else consumeFragments' (pf':pfs') s' (l+1)
-    in consumeFragments' pfs s 0
+renderFragments :: [Fragment] -> String -> [(Char, Maybe Float)]
+renderFragments pfs "" = concat [renderFragment pf "" | pf <- pfs]
+renderFragments pfs s  =
+    let renderFragments' pfs' "" _ = renderFragments pfs' ""
+        renderFragments' []   x  _ = zip x (repeat Nothing)
+        renderFragments' (pf':pfs') s' l =
+            if renderFragment pf' (take l s') == renderFragment pf' (take (l+1) s')
+            then (renderFragment pf' (take l s')) ++ (renderFragments' pfs' (drop l s') 0)
+            else renderFragments' (pf':pfs') s' (l+1)
+    in renderFragments' pfs s 0
