@@ -2,7 +2,7 @@ module Session where
 
 import qualified Data.Audio              (Audio)
 import qualified Data.Time.Clock         (UTCTime, getCurrentTime)
-import qualified Data.Time.Clock.System  (SystemTime)
+import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
 import qualified Data.Text               (pack)
 import qualified Data.List
 import qualified Data.Text.Metrics       (damerauLevenshteinNorm)
@@ -76,6 +76,11 @@ newSession (TypistData p1 p2) i k =
                      (error ("No preset with UID " ++ show i ++ " to add session to."))
                      p2
        return (TypistData p1 p2')
+
+toKeystroke :: Char -> IO Keystroke
+toKeystroke c =
+    do t <- Data.Time.Clock.System.getSystemTime
+       return (Keystroke t c)
 
 ----------------------------------------------------------------------
 --                            Retrieval                             --
