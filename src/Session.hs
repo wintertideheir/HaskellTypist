@@ -1,6 +1,5 @@
 module Session where
 
-import qualified Data.List.Extra         (groupOn)
 import qualified Data.Audio              (Audio)
 import qualified Data.Time.Clock         (UTCTime, getCurrentTime)
 import qualified Data.Time.Clock.System  (SystemTime)
@@ -167,3 +166,15 @@ renderFragments (pf:pfs) s  =
             then (renderFragment pf' (take l s')) ++ (renderFragments pfs' (drop l s'))
             else renderFragments' pf' pfs' s' (l+1)
     in renderFragments' pf pfs s (textLength pf)
+
+groupByLines :: [(Char, Maybe Float)] -> [[(Char, Maybe Float)]]
+groupByLines x =
+    let lineShouldEnd l  ' '  = length l > 50
+        lineShouldEnd _  '\n' = True
+        lineShouldEnd _  _    = False
+        stackReadable [] c     = [[c]]
+        stackReadable (l:ls) c =
+            if lineShouldEnd l (fst c)
+            then []:(c:l):ls
+            else    (c:l):ls
+    in foldl stackReadable [] x
