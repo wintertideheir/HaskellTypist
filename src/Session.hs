@@ -157,12 +157,13 @@ renderFragment (FragmentAudio f _) s =
     substrings that complete each fragment in the given list. 
 -}
 renderFragments :: [Fragment] -> String -> [(Char, Maybe Float)]
-renderFragments pfs "" = concat [renderFragment pf "" | pf <- pfs]
-renderFragments pfs s  =
-    let renderFragments' pfs' "" _ = renderFragments pfs' ""
-        renderFragments' []   x  _ = zip x (repeat Nothing)
-        renderFragments' (pf':pfs') s' l =
+renderFragments []       s  = zip s (repeat Nothing)
+renderFragments pfs      "" = concat [renderFragment pf "" | pf <- pfs]
+renderFragments (pf:pfs) s  =
+    let textLength (FragmentText  s'  ) = length s'
+        textLength (FragmentAudio s' _) = length s'
+        renderFragments' pf' pfs' s' l =
             if renderFragment pf' (take l s') == renderFragment pf' (take (l+1) s')
-            then (renderFragment pf' (take l s')) ++ (renderFragments' pfs' (drop l s') 0)
-            else renderFragments' (pf':pfs') s' (l+1)
-    in renderFragments' pfs s 0
+            then (renderFragment pf' (take l s')) ++ (renderFragments pfs' (drop l s'))
+            else renderFragments' pf' pfs' s' (l+1)
+    in renderFragments' pf pfs s (textLength pf)
