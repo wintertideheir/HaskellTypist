@@ -38,29 +38,39 @@ data TypistData = TypistData { passages :: [Passage]
                              , presets  :: [Preset]
                              }
 ----------------------------------------------------------------------
---                           Constuctors                            --
+--                             Utility                              --
 ----------------------------------------------------------------------
 
 prefix :: [a] -> a -> [a]
 prefix = flip (:)
 
-fallibleFind :: Foldable t => (a -> Bool) -> String -> t a -> a
-fallibleFind p m f =
+fallibleFind :: Foldable t => String -> (a -> Bool) -> t a -> a
+fallibleFind m p f =
     case Data.List.find p f of
         Nothing -> error m
         Just x -> x
 
-fallibleReplace :: (a -> Bool) -> (a -> a) -> String -> [a] -> [a]
-fallibleReplace p r m l =
+fallibleReplace :: String -> (a -> Bool) -> (a -> a) -> [a] -> [a]
+fallibleReplace m p r l =
     case break p l of
         (a, (b:bs)) -> a ++ ((r b):bs)
         (_, [])     -> error m
 
+fallibleIndex :: String -> [a] -> Int -> a
+fallibleIndex m l i =
+    if i > length l
+    then error m
+    else l !! i
+
+----------------------------------------------------------------------
+--                           Constuctors                            --
+----------------------------------------------------------------------
+
 newPassage :: TypistData -> String -> [Fragment] -> IO TypistData
 newPassage t name' fragments' =
     do date' <- Data.Time.Clock.getCurrentTime
-       let uid' = fallibleFind (`notElem` (map (uid :: Passage -> Int) t.passages))
-                               ("No unique passage identifier possible for \"" ++ name' ++ "\".")
+       let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
+                               (`notElem` (map (uid :: Passage -> Int) t.passages))
                                [0..maxBound]
            passage = Passage { uid       = uid'
                              , name      = name'
@@ -72,8 +82,8 @@ newPassage t name' fragments' =
 newPreset :: TypistData -> String -> [Reference] -> IO TypistData
 newPreset t name' references' =
     do date' <- Data.Time.Clock.getCurrentTime
-       let uid' = fallibleFind (`notElem` (map (uid :: Preset -> Int) t.presets))
-                               ("No unique preset identifier possible for \"" ++ name' ++ "\".")
+       let uid' = fallibleFind ("No unique preset identifier possible for \"" ++ name' ++ "\".")
+                               (`notElem` (map (uid :: Preset -> Int) t.presets))
                                [0..maxBound]
            preset = Preset { uid        = uid'
                            , name       = name'
@@ -86,11 +96,10 @@ newPreset t name' references' =
 newSession :: TypistData -> Int -> [Keystroke] -> IO TypistData
 newSession t uid' k =
     do date' <- Data.Time.Clock.getCurrentTime
-       return t{ presets =
-                     fallibleReplace ((== uid') . (uid :: Preset -> Int))
-                                     (\p -> p{sessions `prefix` (Session date' k)})
-                                     ("No preset with ID " ++ show uid' ++ " to save session to.")
-                                     t.presets }
+       return t{ presets = fallibleReplace ("No preset with ID " ++ show uid' ++ " to save session to.")
+                                           ((== uid') . (uid :: Preset -> Int))
+                                           (\p -> p{sessions `prefix` (Session date' k)})
+                                           t.presets }
 
 toKeystroke :: Char -> IO Keystroke
 toKeystroke c =
@@ -107,16 +116,14 @@ toKeystroke c =
 -}
 dereference :: TypistData -> Reference -> [Fragment]
 dereference t (ReferenceAll uid') =
-    case Data.List.find ((== uid') . (uid :: Passage -> Int)) t.passages of
-        Just p  -> p.fragments
-        Nothing -> error ("No passage with UID " ++ show uid' ++ ".")
-dereference t (ReferencePart uid' i) =
-    let indexFragment f i' =
-            if i' > (length f)
-            then error ("Out of bounds reference with passage UID " ++
-                        show uid' ++ " and fragment index" ++ show i' ++ ".")
-            else f !! i'
-    in map (indexFragment (dereference t $ ReferenceAll uid')) i
+    fragments $ fallibleFind ("Invalid reference with passage UID " ++ show uid' ++ ".")
+                             ((== uid') . (uid :: Passage -> Int))
+                             t.passages
+dereference t (ReferencePart uid' indices) =
+    map (\i -> fallibleIndex ("Out of bounds reference with passage UID " ++
+                              show uid' ++ " and fragment index" ++ show i ++ ".")
+                             (dereference t $ ReferenceAll uid') i)
+        indices
 
 ----------------------------------------------------------------------
 --                              Render                              --
