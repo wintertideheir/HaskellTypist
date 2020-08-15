@@ -11,71 +11,86 @@ import qualified Data.Text.Metrics       (damerauLevenshteinNorm)
 --                              Types                               --
 ----------------------------------------------------------------------
 
-data Metadata = Metadata { uid  :: Int
-                         , name :: String
-                         , date :: Data.Time.Clock.UTCTime
-                         }
-
 data Fragment = FragmentText  String
               | FragmentAudio String (Data.Audio.Audio Float)
 
-data Passage = Passage Metadata [Fragment]
+data Passage = Passage { uid       :: Int
+                       , name      :: String
+                       , date      :: Data.Time.Clock.UTCTime
+                       , fragments :: [Fragment]
+                       }
 
 data Reference = ReferenceAll  Int
                | ReferencePart Int [Int]
 
-data Preset = Preset Metadata [Reference] [Session]
+data Preset = Preset { uid        :: Int
+                     , name       :: String
+                     , date       :: Data.Time.Clock.UTCTime
+                     , references :: [Reference]
+                     , sessions   :: [Session]
+                     }
 
 data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
 
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
 
-data TypistData = TypistData [Passage] [Preset]
-
+data TypistData = TypistData { passages :: [Passage]
+                             , presets  :: [Preset]
+                             }
 ----------------------------------------------------------------------
 --                           Constuctors                            --
 ----------------------------------------------------------------------
 
-{-|
-    Create new 'Metadata' given a list of existing 'Metadata' and a name.
-    All non-negative values of 'Int' are possible identifiers. If a unique
-    identifier cannot be found, throw an error. The date recorded is the time
-    of evaluation.
--}
-newMetadata :: [Metadata] -> String -> IO Metadata
-newMetadata m name' =
-    case [0..maxBound] Data.List.\\ (map uid m) of
-         []       -> error ("No unique identifier possible for \"" ++ show name' ++ "\".")  
-         (uid':_) -> do t <- Data.Time.Clock.getCurrentTime
-                        return Metadata { uid  = uid'
-                                        , name = name'
-                                        , date = t
-                                        }
+prefix :: [a] -> a -> [a]
+prefix = flip (:)
+
+fallibleFind :: Foldable t => (a -> Bool) -> String -> t a -> a
+fallibleFind p m f =
+    case Data.List.find p f of
+        Nothing -> error m
+        Just x -> x
+
+fallibleReplace :: (a -> Bool) -> (a -> a) -> String -> [a] -> [a]
+fallibleReplace p r m l =
+    case break p l of
+        (a, (b:bs)) -> a ++ ((r b):bs)
+        (_, [])     -> error m
 
 newPassage :: TypistData -> String -> [Fragment] -> IO TypistData
-newPassage (TypistData p1 p2) n f =
-    do m <- newMetadata (map (\(Passage m' _) -> m') p1) n
-       return (TypistData (Passage m f : p1) p2)
+newPassage t name' fragments' =
+    do date' <- Data.Time.Clock.getCurrentTime
+       let uid' = fallibleFind (`notElem` (map (uid :: Passage -> Int) t.passages))
+                               ("No unique passage identifier possible for \"" ++ name' ++ "\".")
+                               [0..maxBound]
+           passage = Passage { uid       = uid'
+                             , name      = name'
+                             , date      = date'
+                             , fragments = fragments'
+                             }
+       return t{ passages `prefix` passage }
 
 newPreset :: TypistData -> String -> [Reference] -> IO TypistData
-newPreset (TypistData p1 p2) n r =
-    do m <- newMetadata (map (\(Preset m' _ _) -> m') p2) n
-       return (TypistData p1 (Preset m r [] : p2))
+newPreset t name' references' =
+    do date' <- Data.Time.Clock.getCurrentTime
+       let uid' = fallibleFind (`notElem` (map (uid :: Preset -> Int) t.presets))
+                               ("No unique preset identifier possible for \"" ++ name' ++ "\".")
+                               [0..maxBound]
+           preset = Preset { uid        = uid'
+                           , name       = name'
+                           , date       = date'
+                           , references = references'
+                           , sessions   = []
+                           }
+       return t{ presets `prefix` preset }
 
 newSession :: TypistData -> Int -> [Keystroke] -> IO TypistData
-newSession (TypistData p1 p2) i k =
-    do t <- Data.Time.Clock.getCurrentTime
-       let modifyOrError _ _ e []     = e
-           modifyOrError c trans e (x:xs) =
-               if c x
-               then (trans x) : xs
-               else x         : (modifyOrError c trans e xs)
-           p2' = modifyOrError
-                     (\(Preset m _ _) -> uid m == i)
-                     (\(Preset m r s) -> Preset m r (Session t k : s))
-                     (error ("No preset with UID " ++ show i ++ " to add session to."))
-                     p2
-       return (TypistData p1 p2')
+newSession t uid' k =
+    do date' <- Data.Time.Clock.getCurrentTime
+       return t{ presets =
+                     fallibleReplace ((== uid') . (uid :: Preset -> Int))
+                                     (\p -> p{sessions `prefix` (Session date' k)})
+                                     ("No preset with ID " ++ show uid' ++ " to save session to.")
+                                     t.presets }
 
 toKeystroke :: Char -> IO Keystroke
 toKeystroke c =
@@ -91,19 +106,17 @@ toKeystroke c =
     references throw errors.
 -}
 dereference :: TypistData -> Reference -> [Fragment]
-dereference (TypistData p _) (ReferenceAll  uid'  ) =
-    case Data.List.find (\(Passage m _) -> uid m == uid') p of
-        Just (Passage _ f) -> f
-        Nothing            -> error ("No passage with UID " ++ show uid' ++ ".")
-dereference (TypistData p _) (ReferencePart uid' i) =
-    let error1 = error ("Out of bounds passage fragment with passage UID " ++ show uid' ++ ".")
-        error2 = error ("No passage with UID "                             ++ show uid' ++ ".")
-        indexFragment f i' = if i' > (length f)
-                            then error1
-                            else f !! i'
-    in case Data.List.find (\(Passage m _) -> uid m == uid') p of
-           Just (Passage _ f) -> map (indexFragment f) i
-           Nothing            -> error2
+dereference t (ReferenceAll uid') =
+    case Data.List.find ((== uid') . (uid :: Passage -> Int)) t.passages of
+        Just p  -> p.fragments
+        Nothing -> error ("No passage with UID " ++ show uid' ++ ".")
+dereference t (ReferencePart uid' i) =
+    let indexFragment f i' =
+            if i' > (length f)
+            then error ("Out of bounds reference with passage UID " ++
+                        show uid' ++ " and fragment index" ++ show i' ++ ".")
+            else f !! i'
+    in map (indexFragment (dereference t $ ReferenceAll uid')) i
 
 ----------------------------------------------------------------------
 --                              Render                              --
