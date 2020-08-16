@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Session where
 
 import qualified Data.Audio              (Audio)
