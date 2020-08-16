@@ -205,7 +205,9 @@ groupByLines x =
             if lineShouldEnd l (fst c)
             then []:(c:l):ls
             else    (c:l):ls
-    in foldl stackReadable [] x
+    in map reverse
+       $ reverse
+       $ foldl stackReadable [] x
 
 groupByScore :: [(Char, Maybe Float)] -> [(String, Maybe Float)]
 groupByScore x =
