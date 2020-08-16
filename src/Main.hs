@@ -1,64 +1,99 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Main where
 
 import Session
 
 import Control.Monad.IO.Class (liftIO)
-import Data.List (find)
 
 import Brick
-import Brick.Types
 import Brick.Widgets.Center
 import Brick.Widgets.Border
 import Brick.Widgets.Border.Style
 import qualified Graphics.Vty as V
 
-initialSession :: Session
-initialSession = sessionFromString "Gallia est omnis divisa in partes tres, quarum \
-                                   \unam incolunt Belgae, aliam Aquitani, tertiam qui \
-                                   \ipsorum lingua Celtae, nostra Galli appellantur.\
-                                   \\n\
-                                   \Hi omnes lingua, institutis, legibus inter se \
-                                   \differunt. Gallos ab Aquitanis Garumna flumen, a \
-                                   \Belgis Matrona et Sequana dividit.\
-                                   \\n\
-                                   \Horum omnium fortissimi sunt Belgae, propterea\ 
-                                   \quod a cultu atque humanitate provinciae \
-                                   \longissime absunt, minimeque ad eos mercatores \
-                                   \saepe commeant atque ea quae ad effeminandos \
-                                   \animos pertinent important,\
-                                   \\n\
-                                   \proximique sunt Germanis, qui trans Rhenum \
-                                   \incolunt, quibuscum continenter bellum gerunt. \
-                                   \Qua de causa Helvetii quoque reliquos Gallos \
-                                   \virtute praecedunt, quod fere cotidianis proeliis \
-                                   \cum Germanis contendunt, cum aut suis finibus eos \
-                                   \prohibent aut ipsi in eorum finibus bellum gerunt.\
-                                   \\n\
-                                   \Eorum una, pars, quam Gallos obtinere dictum est, \
-                                   \initium capit a flumine Rhodano, continetur \
-                                   \Garumna flumine, Oceano, finibus Belgarum, attingit \
-                                   \etiam ab Sequanis et Helvetiis flumen Rhenum, \
-                                   \vergit ad septentriones."
+-----------------------------------------------------------------------
+--                             Example                               --
+-----------------------------------------------------------------------
+
+exampleFragments :: [Fragment]
+exampleFragments =
+    map FragmentText ["Gallia est omnis divisa in partes tres, quarum \
+                      \unam incolunt Belgae, aliam Aquitani, tertiam qui \
+                      \ipsorum lingua Celtae, nostra Galli appellantur.\n"
+                     ,"Hi omnes lingua, institutis, legibus inter se \
+                      \differunt. Gallos ab Aquitanis Garumna flumen, a \
+                      \Belgis Matrona et Sequana dividit.\n"
+                     ,"Horum omnium fortissimi sunt Belgae, propterea\ 
+                      \quod a cultu atque humanitate provinciae \
+                      \longissime absunt, minimeque ad eos mercatores \
+                      \saepe commeant atque ea quae ad effeminandos \
+                      \animos pertinent important,\n"
+                     ,"proximique sunt Germanis, qui trans Rhenum \
+                      \incolunt, quibuscum continenter bellum gerunt. \
+                      \Qua de causa Helvetii quoque reliquos Gallos \
+                      \virtute praecedunt, quod fere cotidianis proeliis \
+                      \cum Germanis contendunt, cum aut suis finibus eos \
+                      \prohibent aut ipsi in eorum finibus bellum gerunt.\n"
+                     ,"Eorum una, pars, quam Gallos obtinere dictum est, \
+                      \initium capit a flumine Rhodano, continetur \
+                      \Garumna flumine, Oceano, finibus Belgarum, attingit \
+                      \etiam ab Sequanis et Helvetiis flumen Rhenum, \
+                      \vergit ad septentriones."
+                     ]
+
+-----------------------------------------------------------------------
+--                              Themes                               --
+-----------------------------------------------------------------------
 
 themes       :: AttrMap
-themeMiss    :: AttrName
-themeMatch   :: AttrName
 themeNormal  :: AttrName
 themeSpecial :: AttrName
-themes = attrMap (V.black `on` V.white)
-    [ (themeNormal,                V.black `on` V.white)
-    , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
-    , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
-    , (themeSpecial,               bg $ V.rgbColor 200 200 200)
-    , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
-    , (themeSpecial <> themeMatch, fg $ V.rgbColor 150 150 150)
-    ]
-themeMiss    = attrName "miss"
-themeMatch   = attrName "match"
+themeQ25     :: AttrName
+themeQ50     :: AttrName
+themeQ75     :: AttrName
+themeQ100    :: AttrName
+themes =
+    let themeNormal'  :: AttrName -> Int -> Int -> Int -> (AttrName, V.Attr)
+        themeSpecial' :: AttrName -> Int -> Int -> Int -> (AttrName, V.Attr)
+        themeNormal'  t r g b = (themeNormal <> t,  fg $ V.rgbColor r g b)
+        themeSpecial' t r g b = (themeSpecial <> t, bg $ V.rgbColor r g b)
+    in attrMap (V.black `on` V.white)
+        [ (themeNormal               , V.black `on` V.white)
+        , themeNormal'  themeQ25  100 0   0
+        , themeNormal'  themeQ50  100 50  0
+        , themeNormal'  themeQ75  50  100 0
+        , themeNormal'  themeQ100 0   100 0
+        , (themeSpecial              , V.white `on` V.black)
+        , themeSpecial' themeQ25  150 0  0
+        , themeSpecial' themeQ50  100 50 0
+        , themeSpecial' themeQ75  50 100 0
+        , themeSpecial' themeQ100 0  150 0
+        ]
 themeNormal  = attrName "normal"
 themeSpecial = attrName "special"
+themeQ25     = attrName "1st Quartile"
+themeQ50     = attrName "2nd Quartile"
+themeQ75     = attrName "3rd Quartile"
+themeQ100    = attrName "4th Quartile"
 
-app :: App Session () ()
+applyTheme :: AttrName -> String -> Maybe Float -> Widget ()
+applyTheme t s Nothing = showCursor () (Location (0, 0))
+                       $ withAttr t
+                       $ str s
+applyTheme t s (Just x)
+    |             x <= 0.25 = withAttr (t <> themeQ25)  $ str s
+    | 0.25 < x && x <= 0.5  = withAttr (t <> themeQ50)  $ str s
+    | 0.5  < x && x <= 0.75 = withAttr (t <> themeQ75)  $ str s
+    | otherwise             = withAttr (t <> themeQ100) $ str s
+
+-----------------------------------------------------------------------
+--                            App Data                               --
+-----------------------------------------------------------------------
+
+data AppState = AppState TypistData [Keystroke]
+
+app :: App AppState () ()
 app = App { appDraw         = drawFunction
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = keyHandler
@@ -66,15 +101,26 @@ app = App { appDraw         = drawFunction
           , appAttrMap      = const themes
           }
 
-keyHandler :: Session -> BrickEvent () () -> EventM () (Next Session)
-keyHandler s (VtyEvent (V.EvKey V.KEsc []))      = halt s
-keyHandler s (VtyEvent (V.EvKey (V.KChar c) [])) = liftIO (recordKeystroke s c)    >>= continue
-keyHandler s (VtyEvent (V.EvKey V.KEnter    [])) = liftIO (recordKeystroke s '\n') >>= continue
-keyHandler s _                                   = continue s
+recordKeystroke :: AppState -> Char -> IO AppState
+recordKeystroke (AppState td k) c =
+    do k' <- toKeystroke c
+       return (AppState td (k':k))
 
-drawFunction :: Session -> [Widget ()]
-drawFunction s =
-    let checkedLines = sessionCheckedLines s
+keyHandler :: AppState -> BrickEvent () () -> EventM () (Next AppState)
+keyHandler as (VtyEvent (V.EvKey V.KEsc []))      = halt as
+keyHandler as (VtyEvent (V.EvKey (V.KChar c) [])) = liftIO (recordKeystroke as c)    >>= continue
+keyHandler as (VtyEvent (V.EvKey V.KEnter    [])) = liftIO (recordKeystroke as '\n') >>= continue
+keyHandler as _                                   = continue as
+
+drawFunction :: AppState -> [Widget ()]
+drawFunction (AppState td k) =
+    let k' = map (\(Keystroke _ x) -> x) k
+        checkedLines = map groupByScore
+                     $ groupByLines
+                     $ renderFragments (concat $ map (dereference td)
+                                        $ references
+                                        $ head $ presets td)
+                                       k'
         normalLines = vBox
                     $ map hBox
                     $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))
@@ -85,14 +131,14 @@ drawFunction s =
                                        _    -> applyTheme themeSpecial "<-"  m)
                      $ map last
                      $ checkedLines
-        applyTheme t s (Just True)  = withAttr (t <> themeMatch) $ str s
-        applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
-        applyTheme t s Nothing      = showCursor () (Location (0, 0))
-                                    $ withAttr t                 $ str s
     in [withBorderStyle unicode
         $ borderWithLabel (str "Haskell Typist")
         $ center
         $ (normalLines <+> specialLines)]
 
-main :: IO Session
-main = defaultMain app initialSession
+main :: IO AppState
+main =
+    do let td = TypistData [] []
+       td'  <- newPassage td  "Example Passage" exampleFragments
+       td'' <- newPreset  td' "Example Preset"  [ReferenceAll 0]
+       defaultMain app (AppState td'' [])
