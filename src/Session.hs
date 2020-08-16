@@ -5,6 +5,7 @@ import qualified Data.Time.Clock         (UTCTime, getCurrentTime)
 import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
 import qualified Data.Text               (pack)
 import qualified Data.List
+import qualified Data.List.Extra         (groupOn)
 import qualified Data.Text.Metrics       (damerauLevenshteinNorm)
 
 ----------------------------------------------------------------------
@@ -203,3 +204,10 @@ groupByLines x =
             then []:(c:l):ls
             else    (c:l):ls
     in foldl stackReadable [] x
+
+groupByScore :: [(Char, Maybe Float)] -> [(String, Maybe Float)]
+groupByScore x =
+    let collapseSameScore [] = ([],        Nothing)
+        collapseSameScore l  = (map fst l, snd $ head l)
+    in map collapseSameScore
+       $ Data.List.Extra.groupOn snd x
