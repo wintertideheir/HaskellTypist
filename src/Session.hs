@@ -184,7 +184,7 @@ renderFragment (FragmentAudio f _) s =
     substrings that complete each fragment in the given list. 
 -}
 renderFragments :: [Fragment] -> String -> [(Char, Maybe Float)]
-renderFragments []       s  = zip s (repeat Nothing)
+renderFragments []       _  = []
 renderFragments pfs      "" = concat [renderFragment pf "" | pf <- pfs]
 renderFragments (pf:pfs) s  =
     let textLength (FragmentText  s'  ) = length s'
