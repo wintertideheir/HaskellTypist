@@ -113,14 +113,11 @@ keyHandler as (VtyEvent (V.EvKey V.KEnter    [])) = liftIO (recordKeystroke as '
 keyHandler as _                                   = continue as
 
 drawFunction :: AppState -> [Widget ()]
-drawFunction (AppState td k) =
-    let k' = map (\(Keystroke _ x) -> x) k
-        checkedLines = map groupByScore
+drawFunction (AppState (TypistData passages) k) =
+    let checkedLines = map groupByScore
                      $ groupByLines
-                     $ renderFragments (concat $ map (dereference td)
-                                        $ references
-                                        $ head $ presets td)
-                                       k'
+                     $ renderFragments (fragments $ head $ passages)
+                     $ map (\(Keystroke _ x) -> x) k
         normalLines = vBox
                     $ map hBox
                     $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))
@@ -138,7 +135,6 @@ drawFunction (AppState td k) =
 
 main :: IO AppState
 main =
-    do let td = TypistData [] []
+    do let td = TypistData []
        td'  <- newPassage td  "Example Passage" exampleFragments
-       td'' <- newPreset  td' "Example Preset"  [ReferenceAll 0]
-       defaultMain app (AppState td'' [])
+       defaultMain app (AppState td' [])

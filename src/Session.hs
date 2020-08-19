@@ -1,5 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-
 module Session where
 
 import qualified Data.Audio              (Audio)
@@ -14,32 +12,22 @@ import qualified Data.Text.Metrics       (damerauLevenshteinNorm)
 --                              Types                               --
 ----------------------------------------------------------------------
 
-data Fragment = FragmentText  String
-              | FragmentAudio String (Data.Audio.Audio Float)
-
-data Passage = Passage { uid       :: Int
-                       , name      :: String
-                       , date      :: Data.Time.Clock.UTCTime
-                       , fragments :: [Fragment]
-                       }
-
-data Reference = ReferenceAll  Int
-               | ReferencePart Int [Int]
-
-data Preset = Preset { uid        :: Int
-                     , name       :: String
-                     , date       :: Data.Time.Clock.UTCTime
-                     , references :: [Reference]
-                     , sessions   :: [Session]
-                     }
+data Fragment = FragmentText   String
+              | FragmentAudio  String (Data.Audio.Audio Float)
 
 data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
 
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
 
-data TypistData = TypistData { passages :: [Passage]
-                             , presets  :: [Preset]
-                             }
+data Passage = Passage { uid       :: Int
+                       , name      :: String
+                       , date      :: Data.Time.Clock.UTCTime
+                       , fragments :: [Fragment]
+                       , sessions  :: [Session]
+                       }
+
+data TypistData = TypistData [Passage]
+
 ----------------------------------------------------------------------
 --                             Utility                              --
 ----------------------------------------------------------------------
@@ -70,63 +58,34 @@ fallibleIndex m l i =
 ----------------------------------------------------------------------
 
 newPassage :: TypistData -> String -> [Fragment] -> IO TypistData
-newPassage t name' fragments' =
+newPassage (TypistData passages) name' fragments' =
     do date' <- Data.Time.Clock.getCurrentTime
        let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
-                               (`notElem` (map (uid :: Passage -> Int) t.passages))
+                               (`notElem` (map uid passages))
                                [0..maxBound]
            passage = Passage { uid       = uid'
                              , name      = name'
                              , date      = date'
                              , fragments = fragments'
+                             , sessions  = []
                              }
-       return t{ passages `prefix` passage }
-
-newPreset :: TypistData -> String -> [Reference] -> IO TypistData
-newPreset t name' references' =
-    do date' <- Data.Time.Clock.getCurrentTime
-       let uid' = fallibleFind ("No unique preset identifier possible for \"" ++ name' ++ "\".")
-                               (`notElem` (map (uid :: Preset -> Int) t.presets))
-                               [0..maxBound]
-           preset = Preset { uid        = uid'
-                           , name       = name'
-                           , date       = date'
-                           , references = references'
-                           , sessions   = []
-                           }
-       return t{ presets `prefix` preset }
+       return (TypistData (passage : passages))
 
 newSession :: TypistData -> Int -> [Keystroke] -> IO TypistData
-newSession t uid' k =
+newSession (TypistData passages) uid' k =
     do date' <- Data.Time.Clock.getCurrentTime
-       return t{ presets = fallibleReplace ("No preset with ID " ++ show uid' ++ " to save session to.")
-                                           ((== uid') . (uid :: Preset -> Int))
-                                           (\p -> p{sessions `prefix` (Session date' k)})
-                                           t.presets }
+       let session = Session date' k
+           passages' = fallibleReplace
+                           ("No passage with ID " ++ show uid' ++ " to save session to.")
+                           ((== uid') . uid)
+                           (\passage -> passage{sessions `prefix` session})
+                           passages
+       return (TypistData passages')
 
 toKeystroke :: Char -> IO Keystroke
 toKeystroke c =
     do t <- Data.Time.Clock.System.getSystemTime
        return (Keystroke t c)
-
-----------------------------------------------------------------------
---                            Retrieval                             --
-----------------------------------------------------------------------
-
-{-|
-    Retrive a list of passage fragments given a reference. Out of bounds
-    references throw errors.
--}
-dereference :: TypistData -> Reference -> [Fragment]
-dereference t (ReferenceAll uid') =
-    fragments $ fallibleFind ("Invalid reference with passage UID " ++ show uid' ++ ".")
-                             ((== uid') . (uid :: Passage -> Int))
-                             t.passages
-dereference t (ReferencePart uid' indices) =
-    map (\i -> fallibleIndex ("Out of bounds reference with passage UID " ++
-                              show uid' ++ " and fragment index" ++ show i ++ ".")
-                             (dereference t $ ReferenceAll uid') i)
-        indices
 
 ----------------------------------------------------------------------
 --                              Render                              --
