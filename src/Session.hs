@@ -26,7 +26,8 @@ data Passage = Passage { uid       :: Int
                        , sessions  :: [Session]
                        }
 
-data TypistData = TypistData [Passage]
+data TypistData = TypistData { passages :: [Passage]
+                             }
 
 ----------------------------------------------------------------------
 --                             Utility                              --
@@ -58,10 +59,10 @@ fallibleIndex m l i =
 ----------------------------------------------------------------------
 
 newPassage :: TypistData -> String -> [Fragment] -> IO TypistData
-newPassage (TypistData passages) name' fragments' =
+newPassage td name' fragments' =
     do date' <- Data.Time.Clock.getCurrentTime
        let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
-                               (`notElem` (map uid passages))
+                               (`notElem` (map uid td.passages))
                                [0..maxBound]
            passage = Passage { uid       = uid'
                              , name      = name'
@@ -69,18 +70,18 @@ newPassage (TypistData passages) name' fragments' =
                              , fragments = fragments'
                              , sessions  = []
                              }
-       return (TypistData (passage : passages))
+       return td{passages = passage:(td.passages)}
 
 newSession :: TypistData -> Int -> [Keystroke] -> IO TypistData
-newSession (TypistData passages) uid' k =
+newSession td uid' k =
     do date' <- Data.Time.Clock.getCurrentTime
        let session = Session date' k
            passages' = fallibleReplace
                            ("No passage with ID " ++ show uid' ++ " to save session to.")
                            ((== uid') . uid)
                            (\passage -> passage{sessions `prefix` session})
-                           passages
-       return (TypistData passages')
+                           td.passages
+       return td{passages = passages'}
 
 toKeystroke :: Char -> IO Keystroke
 toKeystroke c =

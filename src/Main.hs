@@ -113,10 +113,10 @@ keyHandler as (VtyEvent (V.EvKey V.KEnter    [])) = liftIO (recordKeystroke as '
 keyHandler as _                                   = continue as
 
 drawFunction :: AppState -> [Widget ()]
-drawFunction (AppState (TypistData passages) k) =
+drawFunction (AppState td k) =
     let checkedLines = map groupByScore
                      $ groupByLines
-                     $ renderFragments (fragments $ head $ passages)
+                     $ renderFragments (fragments $ head td.passages)
                      $ map (\(Keystroke _ x) -> x) k
         normalLines = vBox
                     $ map hBox
