@@ -3,7 +3,7 @@ module Interface where
 import Passage
 
 import qualified Data.Time.Clock         (getCurrentTime)
-import qualified Data.List
+import qualified Data.List               (find)
 
 data TypistData = TypistData { passages :: [Passage]
                              }
