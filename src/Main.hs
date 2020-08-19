@@ -3,6 +3,7 @@
 module Main where
 
 import Session
+import TypistData
 
 import Control.Monad.IO.Class (liftIO)
 
