@@ -104,7 +104,7 @@ app = App { appDraw         = drawFunction
 recordKeystroke :: AppState -> Char -> IO AppState
 recordKeystroke (AppState td k) c =
     do k' <- toKeystroke c
-       return (AppState td (k':k))
+       return (AppState td (k ++ [k']))
 
 keyHandler :: AppState -> BrickEvent () () -> EventM () (Next AppState)
 keyHandler as (VtyEvent (V.EvKey V.KEsc []))      = halt as
