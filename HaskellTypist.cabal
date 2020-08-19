@@ -15,8 +15,8 @@ cabal-version:       >=1.10
 
 executable HaskellTypist
   main-is:             Main.hs
-  other-modules:       Session,
-                       TypistData
+  other-modules:       Passage,
+                       Interface
   ghc-options:         -threaded -Wall
                        -F -pgmF=record-dot-preprocessor
   build-depends:       base,

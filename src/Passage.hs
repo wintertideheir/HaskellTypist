@@ -1,4 +1,4 @@
-module Session where
+module Passage where
 
 import qualified Data.Audio              (Audio)
 import qualified Data.Time.Clock         (UTCTime)

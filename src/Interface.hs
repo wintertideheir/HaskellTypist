@@ -1,6 +1,6 @@
-module TypistData where
+module Interface where
 
-import Session
+import Passage
 
 import qualified Data.Time.Clock         (getCurrentTime)
 import qualified Data.List

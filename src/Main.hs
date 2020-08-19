@@ -2,8 +2,8 @@
 
 module Main where
 
-import Session
-import TypistData
+import Passage
+import Interface
 
 import Control.Monad.IO.Class (liftIO)
 
