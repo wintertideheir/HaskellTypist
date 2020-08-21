@@ -102,16 +102,13 @@ app = App { appDraw         = drawFunction
           , appAttrMap      = const themes
           }
 
-recordKeystroke :: AppState -> Char -> IO AppState
-recordKeystroke (AppState td k) c =
-    do k' <- toKeystroke c
-       return (AppState td (k ++ [k']))
-
 keyHandler :: AppState -> BrickEvent () () -> EventM () (Next AppState)
-keyHandler as (VtyEvent (V.EvKey V.KEsc []))      = halt as
-keyHandler as (VtyEvent (V.EvKey (V.KChar c) [])) = liftIO (recordKeystroke as c)    >>= continue
-keyHandler as (VtyEvent (V.EvKey V.KEnter    [])) = liftIO (recordKeystroke as '\n') >>= continue
-keyHandler as _                                   = continue as
+keyHandler as (VtyEvent (V.EvKey V.KEsc [])) = halt as
+keyHandler (AppState td k) (VtyEvent (V.EvKey (V.KChar c) [])) =
+    liftIO (toKeystroke c    >>= return . AppState td . (k ++) . pure) >>= continue
+keyHandler (AppState td k) (VtyEvent (V.EvKey V.KEnter    [])) =
+    liftIO (toKeystroke '\n' >>= return . AppState td . (k ++) . pure) >>= continue
+keyHandler as _ = continue as
 
 drawFunction :: AppState -> [Widget ()]
 drawFunction (AppState td k) =
