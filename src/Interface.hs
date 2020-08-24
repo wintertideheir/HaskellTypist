@@ -8,17 +8,17 @@ import qualified Data.List               (find)
 data TypistData = TypistData { passages :: [Passage]
                              }
 
-newPassage :: TypistData -> String -> [Fragment] -> IO TypistData
-newPassage td name' fragments' =
+newPassage :: TypistData -> String -> String -> IO TypistData
+newPassage td name' text' =
     do date' <- Data.Time.Clock.getCurrentTime
        let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
                                (`notElem` (map uid td.passages))
                                [0..maxBound]
-           passage = Passage { uid       = uid'
-                             , name      = name'
-                             , date      = date'
-                             , fragments = fragments'
-                             , sessions  = []
+           passage = Passage { uid      = uid'
+                             , name     = name'
+                             , date     = date'
+                             , text     = text'
+                             , sessions = []
                              }
        return td{passages = passage:(td.passages)}
 

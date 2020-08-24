@@ -17,31 +17,33 @@ import qualified Graphics.Vty as V
 --                             Example                               --
 -----------------------------------------------------------------------
 
-exampleFragments :: [Fragment]
-exampleFragments =
-    map FragmentText ["Gallia est omnis divisa in partes tres, quarum \
-                      \unam incolunt Belgae, aliam Aquitani, tertiam qui \
-                      \ipsorum lingua Celtae, nostra Galli appellantur.\n"
-                     ,"Hi omnes lingua, institutis, legibus inter se \
-                      \differunt. Gallos ab Aquitanis Garumna flumen, a \
-                      \Belgis Matrona et Sequana dividit.\n"
-                     ,"Horum omnium fortissimi sunt Belgae, propterea\ 
-                      \quod a cultu atque humanitate provinciae \
-                      \longissime absunt, minimeque ad eos mercatores \
-                      \saepe commeant atque ea quae ad effeminandos \
-                      \animos pertinent important,\n"
-                     ,"proximique sunt Germanis, qui trans Rhenum \
-                      \incolunt, quibuscum continenter bellum gerunt. \
-                      \Qua de causa Helvetii quoque reliquos Gallos \
-                      \virtute praecedunt, quod fere cotidianis proeliis \
-                      \cum Germanis contendunt, cum aut suis finibus eos \
-                      \prohibent aut ipsi in eorum finibus bellum gerunt.\n"
-                     ,"Eorum una, pars, quam Gallos obtinere dictum est, \
-                      \initium capit a flumine Rhodano, continetur \
-                      \Garumna flumine, Oceano, finibus Belgarum, attingit \
-                      \etiam ab Sequanis et Helvetiis flumen Rhenum, \
-                      \vergit ad septentriones."
-                     ]
+exampleText :: String
+exampleText = "Gallia est omnis divisa in partes tres, quarum \
+              \unam incolunt Belgae, aliam Aquitani, tertiam qui \
+              \ipsorum lingua Celtae, nostra Galli appellantur.\n\
+              \\
+              \Hi omnes lingua, institutis, legibus inter se \
+              \differunt. Gallos ab Aquitanis Garumna flumen, a \
+              \Belgis Matrona et Sequana dividit.\n\
+              \\
+              \Horum omnium fortissimi sunt Belgae, propterea \
+              \quod a cultu atque humanitate provinciae \
+              \longissime absunt, minimeque ad eos mercatores \
+              \saepe commeant atque ea quae ad effeminandos \
+              \animos pertinent important,\n\
+              \\
+              \proximique sunt Germanis, qui trans Rhenum \
+              \incolunt, quibuscum continenter bellum gerunt. Qua \
+              \de causa Helvetii quoque reliquos Gallos virtute \
+              \praecedunt, quod fere cotidianis proeliis cum \
+              \Germanis contendunt, cum aut suis finibus eos \
+              \prohibent aut ipsi in eorum finibus bellum gerunt.\n\
+              \\
+              \Eorum una, pars, quam Gallos obtinere dictum est, \
+              \initium capit a flumine Rhodano, continetur \
+              \Garumna flumine, Oceano, finibus Belgarum, attingit \
+              \etiam ab Sequanis et Helvetiis flumen Rhenum, \
+              \vergit ad septentriones."
 
 -----------------------------------------------------------------------
 --                              Themes                               --
@@ -114,7 +116,7 @@ drawFunction :: AppState -> [Widget ()]
 drawFunction (AppState td k) =
     let checkedLines = map groupByScore
                      $ groupByLines
-                     $ renderFragments (fragments $ head td.passages)
+                     $ renderFragment (text $ head td.passages)
                      $ map (\(Keystroke _ x) -> x) k
         normalLines = vBox
                     $ map hBox
@@ -134,5 +136,5 @@ drawFunction (AppState td k) =
 main :: IO AppState
 main =
     do let td = TypistData []
-       td'  <- newPassage td  "Example Passage" exampleFragments
+       td'  <- newPassage td  "Example Passage" exampleText
        defaultMain app (AppState td' [])

@@ -24,9 +24,6 @@ executable HaskellTypist
                        vty,
                        extra,
                        time,
-                       HCodecs,
-                       text,
-                       text-metrics,
                        record-hasfield,
                        record-dot-preprocessor
   hs-source-dirs:      src
