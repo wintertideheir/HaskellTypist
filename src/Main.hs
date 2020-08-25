@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Main where
 
 import Passage
@@ -50,45 +48,29 @@ exampleText = "Gallia est omnis divisa in partes tres, quarum \
 -----------------------------------------------------------------------
 
 themes       :: AttrMap
+themeMiss    :: AttrName
+themeMatch   :: AttrName
 themeNormal  :: AttrName
 themeSpecial :: AttrName
-themeQ25     :: AttrName
-themeQ50     :: AttrName
-themeQ75     :: AttrName
-themeQ100    :: AttrName
-themes =
-    let themeNormal'  :: AttrName -> Int -> Int -> Int -> (AttrName, V.Attr)
-        themeSpecial' :: AttrName -> Int -> Int -> Int -> (AttrName, V.Attr)
-        themeNormal'  t r g b = (themeNormal <> t,  fg $ V.rgbColor r g b)
-        themeSpecial' t r g b = (themeSpecial <> t, bg $ V.rgbColor r g b)
-    in attrMap (V.black `on` V.white)
-        [ (themeNormal               , V.black `on` V.white)
-        , themeNormal'  themeQ25  100 0   0
-        , themeNormal'  themeQ50  100 50  0
-        , themeNormal'  themeQ75  50  100 0
-        , themeNormal'  themeQ100 0   100 0
-        , (themeSpecial              , V.white `on` V.black)
-        , themeSpecial' themeQ25  150 0  0
-        , themeSpecial' themeQ50  100 50 0
-        , themeSpecial' themeQ75  50 100 0
-        , themeSpecial' themeQ100 0  150 0
-        ]
+themes = attrMap (V.black `on` V.white)
+    [ (themeNormal,                V.black `on` V.white)
+    , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
+    , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
+    , (themeSpecial,               bg $ V.rgbColor 200 200 200)
+    , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
+    , (themeSpecial <> themeMatch, fg $ V.rgbColor 150 150 150)
+    ]
+themeMiss    = attrName "miss"
+themeMatch   = attrName "match"
 themeNormal  = attrName "normal"
 themeSpecial = attrName "special"
-themeQ25     = attrName "1st Quartile"
-themeQ50     = attrName "2nd Quartile"
-themeQ75     = attrName "3rd Quartile"
-themeQ100    = attrName "4th Quartile"
 
-applyTheme :: AttrName -> String -> Maybe Float -> Widget ()
+applyTheme :: AttrName -> String -> Maybe Bool -> Widget ()
 applyTheme t s Nothing = showCursor () (Location (0, 0))
                        $ withAttr t
                        $ str s
-applyTheme t s (Just x)
-    |             x <= 0.25 = withAttr (t <> themeQ25)  $ str s
-    | 0.25 < x && x <= 0.5  = withAttr (t <> themeQ50)  $ str s
-    | 0.5  < x && x <= 0.75 = withAttr (t <> themeQ75)  $ str s
-    | otherwise             = withAttr (t <> themeQ100) $ str s
+applyTheme t s (Just True)  = withAttr (t <> themeMatch) $ str s
+applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
 
 -----------------------------------------------------------------------
 --                            App Data                               --
@@ -107,17 +89,16 @@ app = App { appDraw         = drawFunction
 keyHandler :: AppState -> BrickEvent () () -> EventM () (Next AppState)
 keyHandler as (VtyEvent (V.EvKey V.KEsc [])) = halt as
 keyHandler (AppState td k) (VtyEvent (V.EvKey (V.KChar c) [])) =
-    liftIO (toKeystroke c    >>= return . AppState td . (k ++) . pure) >>= continue
+    liftIO (record k c    >>= return . AppState td) >>= continue
 keyHandler (AppState td k) (VtyEvent (V.EvKey V.KEnter    [])) =
-    liftIO (toKeystroke '\n' >>= return . AppState td . (k ++) . pure) >>= continue
+    liftIO (record k '\n' >>= return . AppState td) >>= continue
 keyHandler as _ = continue as
 
 drawFunction :: AppState -> [Widget ()]
 drawFunction (AppState td k) =
     let checkedLines = map groupByScore
                      $ groupByLines
-                     $ renderFragment (text $ head td.passages)
-                     $ map (\(Keystroke _ x) -> x) k
+                     $ Passage.render (head td.passages) k
         normalLines = vBox
                     $ map hBox
                     $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))

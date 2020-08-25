@@ -4,6 +4,7 @@ import Passage
 
 import qualified Data.Time.Clock         (getCurrentTime)
 import qualified Data.List               (find)
+import qualified Data.List.Extra         (groupOn)
 
 data TypistData = TypistData { passages :: [Passage]
                              }
@@ -53,3 +54,24 @@ fallibleIndex m l i =
     if i > length l
     then error m
     else l !! i
+
+groupByLines :: [(Char, Maybe Bool)] -> [[(Char, Maybe Bool)]]
+groupByLines x =
+    let lineShouldEnd l  ' '  = length l > 50
+        lineShouldEnd _  '\n' = True
+        lineShouldEnd _  _    = False
+        stackReadable [] c     = [[c]]
+        stackReadable (l:ls) c =
+            if lineShouldEnd l (fst c)
+            then []:(c:l):ls
+            else    (c:l):ls
+    in map reverse
+       $ reverse
+       $ foldl stackReadable [] x
+
+groupByScore :: [(Char, Maybe Bool)] -> [(String, Maybe Bool)]
+groupByScore x =
+    let collapseSameScore [] = ([],        Nothing)
+        collapseSameScore l  = (map fst l, snd $ head l)
+    in map collapseSameScore
+       $ Data.List.Extra.groupOn snd x
