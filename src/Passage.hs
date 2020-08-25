@@ -5,13 +5,6 @@ import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
 
 data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
 
-record :: [Keystroke] -> Char -> IO [Keystroke]
-record keystrokes c =
-    do t <- Data.Time.Clock.System.getSystemTime
-       return (keystrokes ++ [(Keystroke t c)])
-
------------------------------------------------------------------------
-
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
 
 data Passage = Passage { uid      :: Int

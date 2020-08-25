@@ -76,9 +76,7 @@ applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
 --                            App Data                               --
 -----------------------------------------------------------------------
 
-data AppState = AppState TypistData [Keystroke]
-
-app :: App AppState () ()
+app :: App TypistData () ()
 app = App { appDraw         = drawFunction
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = keyHandler
@@ -86,19 +84,19 @@ app = App { appDraw         = drawFunction
           , appAttrMap      = const themes
           }
 
-keyHandler :: AppState -> BrickEvent () () -> EventM () (Next AppState)
-keyHandler as (VtyEvent (V.EvKey V.KEsc [])) = halt as
-keyHandler (AppState td k) (VtyEvent (V.EvKey (V.KChar c) [])) =
-    liftIO (record k c    >>= return . AppState td) >>= continue
-keyHandler (AppState td k) (VtyEvent (V.EvKey V.KEnter    [])) =
-    liftIO (record k '\n' >>= return . AppState td) >>= continue
-keyHandler as _ = continue as
+keyHandler :: TypistData -> BrickEvent () () -> EventM () (Next TypistData)
+keyHandler td (VtyEvent (V.EvKey V.KEsc [])) = halt td
+keyHandler td (VtyEvent (V.EvKey (V.KChar c) [])) =
+    liftIO (record td c)    >>= continue
+keyHandler td (VtyEvent (V.EvKey V.KEnter    [])) =
+    liftIO (record td '\n') >>= continue
+keyHandler td _ = continue td
 
-drawFunction :: AppState -> [Widget ()]
-drawFunction (AppState td k) =
+drawFunction :: TypistData -> [Widget ()]
+drawFunction td =
     let checkedLines = map groupByScore
                      $ groupByLines
-                     $ Passage.render (head td.passages) k
+                     $ Passage.render (head td.passages) td.keystrokes
         normalLines = vBox
                     $ map hBox
                     $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))
@@ -114,8 +112,8 @@ drawFunction (AppState td k) =
         $ center
         $ (normalLines <+> specialLines)]
 
-main :: IO AppState
+main :: IO TypistData
 main =
-    do let td = TypistData []
+    do let td = TypistData [] []
        td'  <- newPassage td  "Example Passage" exampleText
-       defaultMain app (AppState td' [])
+       defaultMain app td'

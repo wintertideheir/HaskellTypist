@@ -5,9 +5,16 @@ import Passage
 import qualified Data.Time.Clock         (getCurrentTime)
 import qualified Data.List               (find)
 import qualified Data.List.Extra         (groupOn)
+import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
 
-data TypistData = TypistData { passages :: [Passage]
+data TypistData = TypistData { passages   :: [Passage]
+                             , keystrokes :: [Keystroke]
                              }
+
+record :: TypistData -> Char -> IO TypistData
+record td c =
+    do t <- Data.Time.Clock.System.getSystemTime
+       return td{keystrokes ++ [(Keystroke t c)]}
 
 newPassage :: TypistData -> String -> String -> IO TypistData
 newPassage td name' text' =
