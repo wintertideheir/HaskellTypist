@@ -5,16 +5,26 @@ import Passage
 import qualified Data.Time.Clock         (getCurrentTime)
 import qualified Data.List               (find)
 import qualified Data.List.Extra         (groupOn)
-import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
+import qualified Data.Time.Clock.System  (SystemTime, getSystemTime, systemSeconds, systemNanoseconds)
 
 data TypistData = TypistData { passages   :: [Passage]
+                             , begin      :: Maybe Data.Time.Clock.System.SystemTime
                              , keystrokes :: [Keystroke]
                              }
+
+asCentiseconds :: Data.Time.Clock.System.SystemTime -> Int
+asCentiseconds x =
+    let seconds'     = (fromIntegral $ Data.Time.Clock.System.systemSeconds x)     * 100           :: Int
+        nanoseconds' = (fromIntegral $ Data.Time.Clock.System.systemNanoseconds x) `quot` 10000000 :: Int
+    in seconds' + nanoseconds'
 
 record :: TypistData -> Char -> IO TypistData
 record td c =
     do t <- Data.Time.Clock.System.getSystemTime
-       return td{keystrokes ++ [(Keystroke t c)]}
+       case td.begin of
+           Just begin' -> return td{keystrokes ++ [Keystroke ((asCentiseconds t) - (asCentiseconds begin')) c]}
+           Nothing     -> return td{keystrokes ++ [Keystroke 0 c],
+                                    begin = Just t}
 
 newPassage :: TypistData -> String -> String -> IO TypistData
 newPassage td name' text' =

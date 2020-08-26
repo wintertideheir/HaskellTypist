@@ -114,6 +114,6 @@ drawFunction td =
 
 main :: IO TypistData
 main =
-    do let td = TypistData [] []
+    do let td = TypistData [] Nothing []
        td'  <- newPassage td  "Example Passage" exampleText
        defaultMain app td'

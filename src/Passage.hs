@@ -1,9 +1,10 @@
 module Passage where
 
-import qualified Data.Time.Clock         (UTCTime)
-import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
+import qualified Data.Time.Clock        (UTCTime)
 
-data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
+data Keystroke = Keystroke { centiseconds :: Int
+                           , character    :: Char
+                           }
 
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
 
@@ -22,5 +23,4 @@ render passage keystrokes =
             if t == s
             then (t, Just True)  : render' ts ss
             else (t, Just False) : render' ts ss
-        keystrokeToChar (Keystroke _ c) = c
-    in render' passage.text (map keystrokeToChar keystrokes)
+    in render' passage.text (map character keystrokes)
