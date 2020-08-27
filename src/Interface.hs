@@ -38,7 +38,7 @@ newPassage td name' text' =
                              , text     = text'
                              , sessions = []
                              }
-       return td{passages = passage:(td.passages)}
+       return td{passages ++ [passage]}
 
 newSession :: TypistData -> Int -> [Keystroke] -> IO TypistData
 newSession td uid' k =
@@ -47,12 +47,9 @@ newSession td uid' k =
            passages' = fallibleReplace
                            ("No passage with ID " ++ show uid' ++ " to save session to.")
                            ((== uid') . uid)
-                           (\passage -> passage{sessions `prefix` session})
+                           (\passage -> passage{sessions ++ [session]})
                            td.passages
        return td{passages = passages'}
-
-prefix :: [a] -> a -> [a]
-prefix = flip (:)
 
 fallibleFind :: Foldable t => String -> (a -> Bool) -> t a -> a
 fallibleFind m p f =
