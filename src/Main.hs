@@ -3,7 +3,6 @@ module Main where
 import Passage
 import Interface
 
-import Control.Monad.IO.Class (liftIO)
 
 import Brick
 import Brick.Widgets.Center
@@ -44,76 +43,19 @@ exampleText = "Gallia est omnis divisa in partes tres, quarum \
               \vergit ad septentriones."
 
 -----------------------------------------------------------------------
---                              Themes                               --
------------------------------------------------------------------------
-
-themes       :: AttrMap
-themeMiss    :: AttrName
-themeMatch   :: AttrName
-themeNormal  :: AttrName
-themeSpecial :: AttrName
-themes = attrMap (V.black `on` V.white)
-    [ (themeNormal,                V.black `on` V.white)
-    , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
-    , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
-    , (themeSpecial,               bg $ V.rgbColor 200 200 200)
-    , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
-    , (themeSpecial <> themeMatch, fg $ V.rgbColor 150 150 150)
-    ]
-themeMiss    = attrName "miss"
-themeMatch   = attrName "match"
-themeNormal  = attrName "normal"
-themeSpecial = attrName "special"
-
-applyTheme :: AttrName -> String -> Maybe Bool -> Widget ()
-applyTheme t s Nothing = showCursor () (Location (0, 0))
-                       $ withAttr t
-                       $ str s
-applyTheme t s (Just True)  = withAttr (t <> themeMatch) $ str s
-applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
-
------------------------------------------------------------------------
 --                            App Data                               --
 -----------------------------------------------------------------------
 
-app :: App Interface () ()
-app = App { appDraw         = drawFunction
+app :: App InterfaceSession () ()
+app = App { appDraw         = draw
           , appChooseCursor = showFirstCursor
-          , appHandleEvent  = keyHandler
+          , appHandleEvent  = input
           , appStartEvent   = return
           , appAttrMap      = const themes
           }
 
-keyHandler :: Interface -> BrickEvent () () -> EventM () (Next Interface)
-keyHandler interface (VtyEvent (V.EvKey V.KEsc [])) = halt interface
-keyHandler interface (VtyEvent (V.EvKey (V.KChar c) [])) =
-    liftIO (record interface c)    >>= continue
-keyHandler interface (VtyEvent (V.EvKey V.KEnter    [])) =
-    liftIO (record interface '\n') >>= continue
-keyHandler interface _ = continue interface
-
-drawFunction :: Interface -> [Widget ()]
-drawFunction td =
-    let checkedLines = map groupByScore
-                     $ groupByLines
-                     $ Passage.render (head td.passages) td.keystrokes
-        normalLines = vBox
-                    $ map hBox
-                    $ map (map (\(s, m) -> applyTheme themeNormal (filter (/= '\n') s) m))
-                    $ checkedLines
-        specialLines = vBox
-                     $ map (\(s, m) -> case last s of
-                                       '\n' -> applyTheme themeSpecial "\\n" m
-                                       _    -> applyTheme themeSpecial "<-"  m)
-                     $ map last
-                     $ checkedLines
-    in [withBorderStyle unicode
-        $ borderWithLabel (str "Haskell Typist")
-        $ center
-        $ (normalLines <+> specialLines)]
-
-main :: IO Interface
+main :: IO InterfaceSession
 main =
-    do let td = Interface [] Nothing []
+    do let td = InterfaceSession [] Nothing []
        td'  <- newPassage td  "Example Passage" exampleText
        defaultMain app td'

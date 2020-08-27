@@ -1,16 +1,88 @@
 module Interface where
 
 import Passage
+import Brick
+import Brick.Widgets.Center
+import Brick.Widgets.Border
+import Brick.Widgets.Border.Style
 
+import qualified Graphics.Vty            as V
 import qualified Data.Time.Clock         (getCurrentTime)
 import qualified Data.List               (find)
 import qualified Data.List.Extra         (groupOn)
 import qualified Data.Time.Clock.System  (SystemTime, getSystemTime, systemSeconds, systemNanoseconds)
+import qualified Control.Monad.IO.Class  (liftIO)
 
-data Interface = Interface { passages   :: [Passage]
-                           , begin      :: Maybe Data.Time.Clock.System.SystemTime
-                           , keystrokes :: [Keystroke]
-                           }
+-----------------------------------------------------------------------
+--                              Themes                               --
+-----------------------------------------------------------------------
+
+themes       :: AttrMap
+themeMiss    :: AttrName
+themeMatch   :: AttrName
+themeNormal  :: AttrName
+themeSpecial :: AttrName
+themes = attrMap (V.black `on` V.white)
+    [ (themeNormal,                V.black `on` V.white)
+    , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
+    , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
+    , (themeSpecial,               bg $ V.rgbColor 200 200 200)
+    , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
+    , (themeSpecial <> themeMatch, fg $ V.rgbColor 150 150 150)
+    ]
+themeMiss    = attrName "miss"
+themeMatch   = attrName "match"
+themeNormal  = attrName "normal"
+themeSpecial = attrName "special"
+
+themeRendered :: AttrName -> String -> Maybe Bool -> Widget ()
+themeRendered t s Nothing = showCursor () (Location (0, 0))
+                          $ withAttr t
+                          $ str s
+themeRendered t s (Just True)  = withAttr (t <> themeMatch) $ str s
+themeRendered t s (Just False) = withAttr (t <> themeMiss)  $ str s
+
+-----------------------------------------------------------------------
+--                            Interfaces                             --
+-----------------------------------------------------------------------
+
+class Interface a where
+    input :: a -> BrickEvent () () -> EventM () (Next a)
+    draw  :: a -> [Widget ()]
+
+data InterfaceSession = InterfaceSession { passages   :: [Passage]
+                                         , begin      :: Maybe Data.Time.Clock.System.SystemTime
+                                         , keystrokes :: [Keystroke]
+                                         }
+
+instance Interface InterfaceSession where
+    input interface (VtyEvent (V.EvKey V.KEsc []))      = halt interface
+    input interface (VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= continue
+    input interface (VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= continue
+    input interface _                                   = continue interface
+    draw  interface =
+        let checkedLines = map groupByScore
+                         $ groupByLines
+                         $ Passage.render (head interface.passages) interface.keystrokes
+            normalLines = vBox
+                        $ map hBox
+                        $ map (map (\(s, m) -> themeRendered themeNormal (filter (/= '\n') s) m))
+                        $ checkedLines
+            specialLines = vBox
+                         $ map (\(s, m) -> case last s of
+                                           '\n' -> themeRendered themeSpecial "\\n" m
+                                           _    -> themeRendered themeSpecial "<-"  m)
+                         $ map last
+                         $ checkedLines
+        in [withBorderStyle unicode
+            $ borderWithLabel (str "Haskell Typist")
+            $ center
+            $ (normalLines <+> specialLines)]
+
+
+-----------------------------------------------------------------------
+--                            Auxiliary                              --
+-----------------------------------------------------------------------
 
 asCentiseconds :: Data.Time.Clock.System.SystemTime -> Int
 asCentiseconds x =
@@ -18,7 +90,7 @@ asCentiseconds x =
         nanoseconds' = (fromIntegral $ Data.Time.Clock.System.systemNanoseconds x) `quot` 10000000 :: Int
     in seconds' + nanoseconds'
 
-record :: Interface -> Char -> IO Interface
+record :: InterfaceSession -> Char -> IO InterfaceSession
 record td c =
     do t <- Data.Time.Clock.System.getSystemTime
        case td.begin of
@@ -26,7 +98,7 @@ record td c =
            Nothing     -> return td{keystrokes ++ [Keystroke 0 c],
                                     begin = Just t}
 
-newPassage :: Interface -> String -> String -> IO Interface
+newPassage :: InterfaceSession -> String -> String -> IO InterfaceSession
 newPassage td name' text' =
     do date' <- Data.Time.Clock.getCurrentTime
        let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
@@ -40,7 +112,7 @@ newPassage td name' text' =
                              }
        return td{passages ++ [passage]}
 
-newSession :: Interface -> Int -> [Keystroke] -> IO Interface
+newSession :: InterfaceSession -> Int -> [Keystroke] -> IO InterfaceSession
 newSession td uid' k =
     do date' <- Data.Time.Clock.getCurrentTime
        let session = Session date' k
