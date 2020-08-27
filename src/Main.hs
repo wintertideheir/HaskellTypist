@@ -76,7 +76,7 @@ applyTheme t s (Just False) = withAttr (t <> themeMiss)  $ str s
 --                            App Data                               --
 -----------------------------------------------------------------------
 
-app :: App TypistData () ()
+app :: App Interface () ()
 app = App { appDraw         = drawFunction
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = keyHandler
@@ -84,15 +84,15 @@ app = App { appDraw         = drawFunction
           , appAttrMap      = const themes
           }
 
-keyHandler :: TypistData -> BrickEvent () () -> EventM () (Next TypistData)
-keyHandler td (VtyEvent (V.EvKey V.KEsc [])) = halt td
-keyHandler td (VtyEvent (V.EvKey (V.KChar c) [])) =
-    liftIO (record td c)    >>= continue
-keyHandler td (VtyEvent (V.EvKey V.KEnter    [])) =
-    liftIO (record td '\n') >>= continue
-keyHandler td _ = continue td
+keyHandler :: Interface -> BrickEvent () () -> EventM () (Next Interface)
+keyHandler interface (VtyEvent (V.EvKey V.KEsc [])) = halt interface
+keyHandler interface (VtyEvent (V.EvKey (V.KChar c) [])) =
+    liftIO (record interface c)    >>= continue
+keyHandler interface (VtyEvent (V.EvKey V.KEnter    [])) =
+    liftIO (record interface '\n') >>= continue
+keyHandler interface _ = continue interface
 
-drawFunction :: TypistData -> [Widget ()]
+drawFunction :: Interface -> [Widget ()]
 drawFunction td =
     let checkedLines = map groupByScore
                      $ groupByLines
@@ -112,8 +112,8 @@ drawFunction td =
         $ center
         $ (normalLines <+> specialLines)]
 
-main :: IO TypistData
+main :: IO Interface
 main =
-    do let td = TypistData [] Nothing []
+    do let td = Interface [] Nothing []
        td'  <- newPassage td  "Example Passage" exampleText
        defaultMain app td'

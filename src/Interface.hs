@@ -7,10 +7,10 @@ import qualified Data.List               (find)
 import qualified Data.List.Extra         (groupOn)
 import qualified Data.Time.Clock.System  (SystemTime, getSystemTime, systemSeconds, systemNanoseconds)
 
-data TypistData = TypistData { passages   :: [Passage]
-                             , begin      :: Maybe Data.Time.Clock.System.SystemTime
-                             , keystrokes :: [Keystroke]
-                             }
+data Interface = Interface { passages   :: [Passage]
+                           , begin      :: Maybe Data.Time.Clock.System.SystemTime
+                           , keystrokes :: [Keystroke]
+                           }
 
 asCentiseconds :: Data.Time.Clock.System.SystemTime -> Int
 asCentiseconds x =
@@ -18,7 +18,7 @@ asCentiseconds x =
         nanoseconds' = (fromIntegral $ Data.Time.Clock.System.systemNanoseconds x) `quot` 10000000 :: Int
     in seconds' + nanoseconds'
 
-record :: TypistData -> Char -> IO TypistData
+record :: Interface -> Char -> IO Interface
 record td c =
     do t <- Data.Time.Clock.System.getSystemTime
        case td.begin of
@@ -26,7 +26,7 @@ record td c =
            Nothing     -> return td{keystrokes ++ [Keystroke 0 c],
                                     begin = Just t}
 
-newPassage :: TypistData -> String -> String -> IO TypistData
+newPassage :: Interface -> String -> String -> IO Interface
 newPassage td name' text' =
     do date' <- Data.Time.Clock.getCurrentTime
        let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
@@ -40,7 +40,7 @@ newPassage td name' text' =
                              }
        return td{passages ++ [passage]}
 
-newSession :: TypistData -> Int -> [Keystroke] -> IO TypistData
+newSession :: Interface -> Int -> [Keystroke] -> IO Interface
 newSession td uid' k =
     do date' <- Data.Time.Clock.getCurrentTime
        let session = Session date' k
