@@ -23,10 +23,3 @@ themeSpecial = attrName "special"
 
 rgbColorInt :: Int -> Int -> Int -> Color
 rgbColorInt = rgbColor
-
-themeRendered :: AttrName -> String -> Maybe Bool -> Widget ()
-themeRendered t s Nothing = Brick.showCursor () (Location (0, 0))
-                          $ withAttr t
-                          $ str s
-themeRendered t s (Just True)  = withAttr (t <> themeMatch) $ str s
-themeRendered t s (Just False) = withAttr (t <> themeMiss)  $ str s
