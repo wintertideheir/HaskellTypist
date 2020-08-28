@@ -1,5 +1,6 @@
 module Main where
 
+import Passage
 import Interface
 import Interface.InterfaceSession
 import Themes
@@ -52,6 +53,6 @@ app = App { appDraw         = draw
 
 main :: IO InterfaceSession
 main =
-    do let td = InterfaceSession [] Nothing []
-       td'  <- newPassage td  "Example Passage" exampleText
-       defaultMain app td'
+    do passages' <- newPassage [] "Example Passage" exampleText
+       let td = InterfaceSession passages' Nothing []
+       defaultMain app td

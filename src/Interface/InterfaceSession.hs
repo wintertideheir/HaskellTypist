@@ -50,28 +50,3 @@ record td c =
            Just begin' -> return td{keystrokes ++ [Keystroke ((asCentiseconds t) - (asCentiseconds begin')) c]}
            Nothing     -> return td{keystrokes ++ [Keystroke 0 c],
                                     begin = Just t}
-
-newPassage :: InterfaceSession -> String -> String -> IO InterfaceSession
-newPassage td name' text' =
-    do date' <- Data.Time.Clock.getCurrentTime
-       let uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
-                               (`notElem` (map uid td.passages))
-                               [0..maxBound]
-           passage = Passage { uid      = uid'
-                             , name     = name'
-                             , date     = date'
-                             , text     = text'
-                             , sessions = []
-                             }
-       return td{passages ++ [passage]}
-
-newSession :: InterfaceSession -> Int -> [Keystroke] -> IO InterfaceSession
-newSession td uid' k =
-    do date' <- Data.Time.Clock.getCurrentTime
-       let session = Session date' k
-           passages' = fallibleReplace
-                           ("No passage with ID " ++ show uid' ++ " to save session to.")
-                           ((== uid') . uid)
-                           (\passage -> passage{sessions ++ [session]})
-                           td.passages
-       return td{passages = passages'}
