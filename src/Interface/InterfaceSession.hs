@@ -7,7 +7,6 @@ import Themes
 import Brick
 
 import qualified Graphics.Vty            as V
-import qualified Data.Time.Clock         (getCurrentTime)
 import qualified Data.Time.Clock.System  (SystemTime, getSystemTime)
 import qualified Control.Monad.IO.Class  (liftIO)
 

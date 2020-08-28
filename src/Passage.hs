@@ -1,8 +1,7 @@
 module Passage where
 
 import qualified Data.Time.Clock        (UTCTime, getCurrentTime)
-import qualified Data.Time.Clock.System (SystemTime, getSystemTime)
-import qualified Data.List               (find)
+import qualified Data.List              (find)
 
 data Keystroke = Keystroke { centiseconds :: Int
                            , character    :: Char
