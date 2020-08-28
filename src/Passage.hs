@@ -49,7 +49,7 @@ newSession passages uid' keystrokes =
        let session = Session date' keystrokes
            compare_uid = (== uid') . uid
            error_msg = "No passage with ID " ++ show uid' ++ " to save session to."
-           passages' = case break compareUid passages of
+           passages' = case break compare_uid passages of
                            (a, (b:bs)) -> a ++ ((b{sessions ++ [session]}):bs)
                            (_, [])     -> error error_msg
        return passages'
