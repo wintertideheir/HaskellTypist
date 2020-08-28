@@ -30,13 +30,11 @@ render passage keystrokes =
 newPassage :: [Passage] -> String -> String -> IO [Passage]
 newPassage passages name' text' =
     do date' <- Data.Time.Clock.getCurrentTime
-       let fallibleFind m p f =
-               case Data.List.find p f of
-                   Nothing -> error m
-                   Just x -> x
-           uid' = fallibleFind ("No unique passage identifier possible for \"" ++ name' ++ "\".")
-                               (`notElem` (map uid passages))
-                               [0..maxBound]
+       let free_uids = Data.List.find (`notElem` (map uid passages)) [0..maxBound]
+           error_msg = "No unique passage identifier possible for \"" ++ name' ++ "\"."
+           uid' = case free_uids of
+                      Nothing    -> error error_msg
+                      Just uid'' -> uid''
            passage = Passage { uid      = uid'
                              , name     = name'
                              , date     = date'
@@ -48,14 +46,10 @@ newPassage passages name' text' =
 newSession :: [Passage] -> Int -> [Keystroke] -> IO [Passage]
 newSession passages uid' keystrokes =
     do date' <- Data.Time.Clock.getCurrentTime
-       let fallibleReplace m p r l =
-               case break p l of
-                   (a, (b:bs)) -> a ++ ((r b):bs)
-                   (_, [])     -> error m
-           session = Session date' keystrokes
-           passages' = fallibleReplace
-                           ("No passage with ID " ++ show uid' ++ " to save session to.")
-                           ((== uid') . uid)
-                           (\passage -> passage{sessions ++ [session]})
-                           passages
+       let session = Session date' keystrokes
+           compare_uid = (== uid') . uid
+           error_msg = "No passage with ID " ++ show uid' ++ " to save session to."
+           passages' = case break compareUid passages of
+                           (a, (b:bs)) -> a ++ ((b{sessions ++ [session]}):bs)
+                           (_, [])     -> error error_msg
        return passages'
