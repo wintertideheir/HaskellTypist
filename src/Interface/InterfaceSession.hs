@@ -5,9 +5,6 @@ import Interface
 
 import Themes
 import Brick
-import Brick.Widgets.Center
-import Brick.Widgets.Border
-import Brick.Widgets.Border.Style
 
 import qualified Graphics.Vty            as V
 import qualified Data.Time.Clock         (getCurrentTime)
@@ -38,10 +35,7 @@ instance Interface InterfaceSession where
                                            _    -> themeRendered themeSpecial "<-"  m)
                          $ map last
                          $ checkedLines
-        in [withBorderStyle unicode
-            $ borderWithLabel (str "Haskell Typist")
-            $ center
-            $ (normalLines <+> specialLines)]
+        in normalLines <+> specialLines
 
 record :: InterfaceSession -> Char -> IO InterfaceSession
 record td c =

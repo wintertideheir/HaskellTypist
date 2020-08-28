@@ -6,6 +6,9 @@ import Interface.InterfaceSession
 import Themes
 
 import Brick
+import Brick.Widgets.Center
+import Brick.Widgets.Border
+import Brick.Widgets.Border.Style
 
 -----------------------------------------------------------------------
 --                             Example                               --
@@ -44,12 +47,19 @@ exampleText = "Gallia est omnis divisa in partes tres, quarum \
 -----------------------------------------------------------------------
 
 app :: App InterfaceSession () ()
-app = App { appDraw         = draw
+app = App { appDraw         = draw'
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = input
           , appStartEvent   = return
           , appAttrMap      = const themes
           }
+
+draw' :: Interface a => a -> [Widget ()]
+draw' = pure
+      . withBorderStyle unicode
+      . borderWithLabel (str "Haskell Typist")
+      . center
+      . draw
 
 main :: IO InterfaceSession
 main =
