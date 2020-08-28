@@ -1,14 +1,10 @@
 module Main where
 
-import Passage
 import Interface
+import Interface.InterfaceSession
 import Themes
 
 import Brick
-import Brick.Widgets.Center
-import Brick.Widgets.Border
-import Brick.Widgets.Border.Style
-import qualified Graphics.Vty as V
 
 -----------------------------------------------------------------------
 --                             Example                               --
