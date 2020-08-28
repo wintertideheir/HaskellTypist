@@ -1,6 +1,7 @@
 module Interface where
 
 import Passage
+import Themes
 import Brick
 import Brick.Widgets.Center
 import Brick.Widgets.Border
@@ -12,35 +13,6 @@ import qualified Data.List               (find)
 import qualified Data.List.Extra         (groupOn)
 import qualified Data.Time.Clock.System  (SystemTime, getSystemTime, systemSeconds, systemNanoseconds)
 import qualified Control.Monad.IO.Class  (liftIO)
-
------------------------------------------------------------------------
---                              Themes                               --
------------------------------------------------------------------------
-
-themes       :: AttrMap
-themeMiss    :: AttrName
-themeMatch   :: AttrName
-themeNormal  :: AttrName
-themeSpecial :: AttrName
-themes = attrMap (V.black `on` V.white)
-    [ (themeNormal,                V.black `on` V.white)
-    , (themeNormal <> themeMiss,   bg $ V.rgbColor 255 150 150)
-    , (themeNormal <> themeMatch,  fg $ V.rgbColor  50  50  50)
-    , (themeSpecial,               bg $ V.rgbColor 200 200 200)
-    , (themeSpecial <> themeMiss,  fg $ V.rgbColor 255  50  50)
-    , (themeSpecial <> themeMatch, fg $ V.rgbColor 150 150 150)
-    ]
-themeMiss    = attrName "miss"
-themeMatch   = attrName "match"
-themeNormal  = attrName "normal"
-themeSpecial = attrName "special"
-
-themeRendered :: AttrName -> String -> Maybe Bool -> Widget ()
-themeRendered t s Nothing = showCursor () (Location (0, 0))
-                          $ withAttr t
-                          $ str s
-themeRendered t s (Just True)  = withAttr (t <> themeMatch) $ str s
-themeRendered t s (Just False) = withAttr (t <> themeMiss)  $ str s
 
 -----------------------------------------------------------------------
 --                            Interfaces                             --

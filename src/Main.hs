@@ -2,7 +2,7 @@ module Main where
 
 import Passage
 import Interface
-
+import Themes
 
 import Brick
 import Brick.Widgets.Center
