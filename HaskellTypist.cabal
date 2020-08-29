@@ -22,6 +22,7 @@ executable HaskellTypist
   ghc-options:         -threaded -Wall
                        -F -pgmF=record-dot-preprocessor
   build-depends:       base,
+                       flat,
                        brick,
                        vty,
                        extra,

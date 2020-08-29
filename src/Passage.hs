@@ -1,13 +1,32 @@
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Passage where
 
-import qualified Data.Time.Clock        (UTCTime, getCurrentTime)
+import qualified Data.Time.Clock        (UTCTime(..), DiffTime, getCurrentTime, diffTimeToPicoseconds, picosecondsToDiffTime)
+import qualified Data.Time.Calendar     (Day(..))
 import qualified Data.List              (find)
+import qualified GHC.Generics           (Generic)
+import qualified Flat                   (Flat, encode, decode, size)
+
+deriving instance GHC.Generics.Generic Data.Time.Calendar.Day
+deriving instance GHC.Generics.Generic Data.Time.Clock.UTCTime
+deriving instance Flat.Flat            Data.Time.Calendar.Day
+deriving instance Flat.Flat            Data.Time.Clock.UTCTime
+
+instance Flat.Flat Data.Time.Clock.DiffTime where
+    encode = Flat.encode . Data.Time.Clock.diffTimeToPicoseconds
+    decode = fmap Data.Time.Clock.picosecondsToDiffTime Flat.decode
+    size   = Flat.size . Data.Time.Clock.diffTimeToPicoseconds
 
 data Keystroke = Keystroke { centiseconds :: Int
                            , character    :: Char
                            }
+    deriving (GHC.Generics.Generic, Flat.Flat)
 
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
+    deriving (GHC.Generics.Generic, Flat.Flat)
 
 data Passage = Passage { uid      :: Int
                        , name     :: String
@@ -15,6 +34,7 @@ data Passage = Passage { uid      :: Int
                        , text     :: String
                        , sessions :: [Session]
                        }
+    deriving (GHC.Generics.Generic, Flat.Flat)
 
 render :: Passage -> [Keystroke] -> [(Char, Maybe Bool)]
 render passage keystrokes =
