@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Passage where
 
 import qualified Data.Time.Clock        (UTCTime(..), DiffTime, getCurrentTime, diffTimeToPicoseconds, picosecondsToDiffTime)
