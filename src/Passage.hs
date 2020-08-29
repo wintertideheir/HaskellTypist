@@ -6,11 +6,11 @@
 
 module Passage where
 
-import qualified Data.Time.Clock        (UTCTime(..), DiffTime, getCurrentTime, diffTimeToPicoseconds, picosecondsToDiffTime)
-import qualified Data.Time.Calendar     (Day(..))
-import qualified Data.List              (find)
-import qualified GHC.Generics           (Generic)
-import qualified Flat                   (Flat, encode, decode, size)
+import qualified Data.Time.Clock
+import qualified Data.Time.Calendar
+import qualified Data.List
+import qualified GHC.Generics
+import qualified Flat
 
 deriving instance GHC.Generics.Generic Data.Time.Calendar.Day
 deriving instance GHC.Generics.Generic Data.Time.Clock.UTCTime

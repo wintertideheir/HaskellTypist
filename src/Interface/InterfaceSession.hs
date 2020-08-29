@@ -4,12 +4,13 @@ import Passage
 import Interface
 
 import Themes
-import Brick
 
-import qualified Graphics.Vty            as V
-import qualified Data.List.Extra         (groupOn)
-import qualified Data.Time.Clock.System  (SystemTime, getSystemTime, systemSeconds, systemNanoseconds)
-import qualified Control.Monad.IO.Class  (liftIO)
+import qualified Brick as B
+import qualified Graphics.Vty as V
+
+import qualified Data.List.Extra
+import qualified Data.Time.Clock.System
+import qualified Control.Monad.IO.Class
 
 data InterfaceSession = InterfaceSession { passages   :: [Passage]
                                          , begin      :: Maybe Data.Time.Clock.System.SystemTime
@@ -17,25 +18,25 @@ data InterfaceSession = InterfaceSession { passages   :: [Passage]
                                          }
 
 instance Interface InterfaceSession where
-    input interface (VtyEvent (V.EvKey V.KEsc []))      = halt interface
-    input interface (VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= continue
-    input interface (VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= continue
-    input interface _                                   = continue interface
+    input interface (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
+    input interface (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
+    input interface (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
+    input interface _                                     = B.continue interface
     draw  interface =
         let checkedLines = map groupByScore
                          $ groupByLines
                          $ Passage.render (head interface.passages) interface.keystrokes
-            normalLines = vBox
-                        $ map hBox
+            normalLines = B.vBox
+                        $ map B.hBox
                         $ map (map (\(s, m) -> themeRendered themeNormal (filter (/= '\n') s) m))
                         $ checkedLines
-            specialLines = vBox
+            specialLines = B.vBox
                          $ map (\(s, m) -> case last s of
                                            '\n' -> themeRendered themeSpecial "\\n" m
                                            _    -> themeRendered themeSpecial "<-"  m)
                          $ map last
                          $ checkedLines
-        in normalLines <+> specialLines
+        in normalLines B.<+> specialLines
 
 record :: InterfaceSession -> Char -> IO InterfaceSession
 record td c =
@@ -45,12 +46,12 @@ record td c =
            Nothing     -> return td{keystrokes ++ [Keystroke 0 c],
                                     begin = Just t}
 
-themeRendered :: AttrName -> String -> Maybe Bool -> Widget ()
-themeRendered t s Nothing = Brick.showCursor () (Location (0, 0))
-                          $ withAttr t
-                          $ str s
-themeRendered t s (Just True)  = withAttr (t <> themeMatch) $ str s
-themeRendered t s (Just False) = withAttr (t <> themeMiss)  $ str s
+themeRendered :: B.AttrName -> String -> Maybe Bool -> B.Widget ()
+themeRendered t s Nothing = B.showCursor () (B.Location (0, 0))
+                          $ B.withAttr t
+                          $ B.str s
+themeRendered t s (Just True)  = B.withAttr (t <> themeMatch) $ B.str s
+themeRendered t s (Just False) = B.withAttr (t <> themeMiss)  $ B.str s
 
 asCentiseconds :: Data.Time.Clock.System.SystemTime -> Int
 asCentiseconds x =

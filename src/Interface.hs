@@ -1,6 +1,6 @@
 module Interface where
 
-import qualified Brick                   (BrickEvent, EventM, Next, Widget)
+import qualified Brick
 
 class Interface a where
     input :: a -> Brick.BrickEvent () () -> Brick.EventM () (Brick.Next a)
