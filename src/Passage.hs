@@ -7,13 +7,16 @@
 module Passage where
 
 import qualified Data.Time.Clock
+import qualified Data.Time.Clock.System
 import qualified Data.Time.Calendar
 import qualified Data.List
 import qualified GHC.Generics
 import qualified Flat
 
+deriving instance GHC.Generics.Generic Data.Time.Clock.System.SystemTime
 deriving instance GHC.Generics.Generic Data.Time.Calendar.Day
 deriving instance GHC.Generics.Generic Data.Time.Clock.UTCTime
+deriving instance Flat.Flat            Data.Time.Clock.System.SystemTime
 deriving instance Flat.Flat            Data.Time.Calendar.Day
 deriving instance Flat.Flat            Data.Time.Clock.UTCTime
 
@@ -22,9 +25,7 @@ instance Flat.Flat Data.Time.Clock.DiffTime where
     decode = fmap Data.Time.Clock.picosecondsToDiffTime Flat.decode
     size   = Flat.size . Data.Time.Clock.diffTimeToPicoseconds
 
-data Keystroke = Keystroke { centiseconds :: Int
-                           , character    :: Char
-                           }
+data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
     deriving (GHC.Generics.Generic, Flat.Flat)
 
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
@@ -38,6 +39,12 @@ data Passage = Passage { uid      :: Int
                        }
     deriving (GHC.Generics.Generic, Flat.Flat)
 
+fromKeystroke :: Keystroke -> Char
+fromKeystroke (Keystroke _ c) = c
+
+toKeystroke :: Char -> IO Keystroke
+toKeystroke c = ($ c) <$> (Keystroke <$> Data.Time.Clock.System.getSystemTime)
+
 render :: Passage -> [Keystroke] -> [(Char, Maybe Bool)]
 render passage keystrokes =
     let render' []     _      = []
@@ -46,7 +53,7 @@ render passage keystrokes =
             if t == s
             then (t, Just True)  : render' ts ss
             else (t, Just False) : render' ts ss
-    in render' passage.text (map character keystrokes)
+    in render' passage.text (map fromKeystroke keystrokes)
 
 newPassage :: [Passage] -> String -> String -> IO [Passage]
 newPassage passages name' text' =

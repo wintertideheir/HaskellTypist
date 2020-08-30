@@ -64,5 +64,5 @@ draw' = pure
 main :: IO InterfaceSession
 main =
     do passages' <- newPassage [] "Example Passage" exampleText
-       let td = InterfaceSession passages' Nothing []
+       let td = InterfaceSession passages' []
        defaultMain app td
