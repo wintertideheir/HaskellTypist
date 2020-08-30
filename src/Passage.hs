@@ -12,6 +12,7 @@ import qualified Data.Time.Calendar
 import qualified Data.List
 import qualified GHC.Generics
 import qualified Flat
+import qualified Flat.Decoder.Types
 
 deriving instance GHC.Generics.Generic Data.Time.Clock.System.SystemTime
 deriving instance GHC.Generics.Generic Data.Time.Calendar.Day
@@ -25,6 +26,16 @@ instance Flat.Flat Data.Time.Clock.DiffTime where
     decode = fmap Data.Time.Clock.picosecondsToDiffTime Flat.decode
     size   = Flat.size . Data.Time.Clock.diffTimeToPicoseconds
 
+data Transient a = Transient a
+
+instance Flat.Flat (Transient [a]) where
+    encode _ = Flat.encode ()
+    decode   = (Transient []) <$ (Flat.decode :: Flat.Decoder.Types.Get ())
+    size   _ = Flat.size ()
+
+instance Functor Transient where
+    fmap f (Transient a) = Transient (f a)
+
 data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
     deriving (GHC.Generics.Generic, Flat.Flat)
 
@@ -35,7 +46,7 @@ data Passage = Passage { uid      :: Int
                        , name     :: String
                        , date     :: Data.Time.Clock.UTCTime
                        , text     :: String
-                       , sessions :: [Session]
+                       , sessions :: Transient [Session]
                        }
     deriving (GHC.Generics.Generic, Flat.Flat)
 
@@ -67,7 +78,7 @@ newPassage passages name' text' =
                              , name     = name'
                              , date     = date'
                              , text     = text'
-                             , sessions = []
+                             , sessions = Transient []
                              }
        return (passage:passages)
 
@@ -78,6 +89,6 @@ newSession passages uid' keystrokes =
            compare_uid = (== uid') . uid
            error_msg = "No passage with ID " ++ show uid' ++ " to save session to."
            passages' = case break compare_uid passages of
-                           (a, (b:bs)) -> a ++ ((b{sessions ++ [session]}):bs)
+                           (a, (b:bs)) -> a ++ ((b{sessions = fmap (++ [session]) b.sessions}):bs)
                            (_, [])     -> error error_msg
        return passages'
