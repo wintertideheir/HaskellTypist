@@ -10,9 +10,13 @@ import qualified Data.Time.Clock
 import qualified Data.Time.Clock.System
 import qualified Data.Time.Calendar
 import qualified Data.List
-import qualified GHC.Generics
 import qualified Flat
 import qualified Flat.Decoder.Types
+import qualified GHC.Generics
+
+-----------------------------------------------------------------------
+--                          Serialization                            --
+-----------------------------------------------------------------------
 
 deriving instance GHC.Generics.Generic Data.Time.Clock.System.SystemTime
 deriving instance GHC.Generics.Generic Data.Time.Calendar.Day
@@ -42,8 +46,18 @@ instance (HasDefault a) => Flat.Flat (Transient a) where
     decode   = (Transient defaultValue) <$ (Flat.decode :: Flat.Decoder.Types.Get ())
     size   _ = Flat.size ()
 
+-----------------------------------------------------------------------
+--                              Types                                --
+-----------------------------------------------------------------------
+
 data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
     deriving (GHC.Generics.Generic, Flat.Flat)
+
+fromKeystroke :: Keystroke -> Char
+fromKeystroke (Keystroke _ c) = c
+
+toKeystroke :: Char -> IO Keystroke
+toKeystroke c = ($ c) <$> (Keystroke <$> Data.Time.Clock.System.getSystemTime)
 
 data Session = Session Data.Time.Clock.UTCTime [Keystroke]
     deriving (GHC.Generics.Generic, Flat.Flat)
@@ -56,11 +70,9 @@ data Passage = Passage { uid      :: Int
                        }
     deriving (GHC.Generics.Generic, Flat.Flat)
 
-fromKeystroke :: Keystroke -> Char
-fromKeystroke (Keystroke _ c) = c
-
-toKeystroke :: Char -> IO Keystroke
-toKeystroke c = ($ c) <$> (Keystroke <$> Data.Time.Clock.System.getSystemTime)
+-----------------------------------------------------------------------
+--                            Functions                              --
+-----------------------------------------------------------------------
 
 render :: Passage -> [Keystroke] -> [(Char, Maybe Bool)]
 render passage keystrokes =
