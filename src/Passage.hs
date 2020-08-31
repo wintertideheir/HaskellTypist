@@ -28,13 +28,19 @@ instance Flat.Flat Data.Time.Clock.DiffTime where
 
 data Transient a = Transient a
 
-instance Flat.Flat (Transient [a]) where
-    encode _ = Flat.encode ()
-    decode   = (Transient []) <$ (Flat.decode :: Flat.Decoder.Types.Get ())
-    size   _ = Flat.size ()
-
 instance Functor Transient where
     fmap f (Transient a) = Transient (f a)
+
+class HasDefault a where
+    defaultValue :: a
+
+instance HasDefault [a] where
+    defaultValue = []
+
+instance (HasDefault a) => Flat.Flat (Transient a) where
+    encode _ = Flat.encode ()
+    decode   = (Transient defaultValue) <$ (Flat.decode :: Flat.Decoder.Types.Get ())
+    size   _ = Flat.size ()
 
 data Keystroke = Keystroke Data.Time.Clock.System.SystemTime Char
     deriving (GHC.Generics.Generic, Flat.Flat)
