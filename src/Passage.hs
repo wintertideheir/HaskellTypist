@@ -6,6 +6,7 @@
 
 module Passage where
 
+import qualified Data.Char
 import qualified Data.Time.Clock
 import qualified Data.Time.Clock.System
 import qualified Data.Time.Calendar
@@ -110,3 +111,24 @@ newSession passages uid' keystrokes =
                            (a, (b:bs)) -> a ++ ((b{sessions = fmap (++ [session]) b.sessions}):bs)
                            (_, [])     -> error error_msg
        return passages'
+
+-----------------------------------------------------------------------
+--                           Files                                   --
+-----------------------------------------------------------------------
+
+filenameExtPassage :: String
+filenameExtSession :: String
+filenameExtPassage = ".htyp"
+filenameExtSession = ".data"
+
+filenamePassage :: Passage -> String
+filenamePassage = (++ filenameExtPassage)
+                . filter Data.Char.isLetter
+                . filter Data.Char.isPrint
+                . name
+
+filenameSession :: Passage -> String
+filenameSession = (++ filenameExtSession)
+                . filter Data.Char.isLetter
+                . filter Data.Char.isPrint
+                . name
