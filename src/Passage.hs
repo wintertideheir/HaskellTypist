@@ -14,6 +14,7 @@ import qualified Data.List
 import qualified Flat
 import qualified Flat.Decoder.Types
 import qualified GHC.Generics
+import qualified System.FilePath
 
 -----------------------------------------------------------------------
 --                          Serialization                            --
@@ -118,17 +119,17 @@ newSession passages uid' keystrokes =
 
 filenameExtPassage :: String
 filenameExtSession :: String
-filenameExtPassage = ".htyp"
-filenameExtSession = ".data"
+filenameExtPassage = "htyp"
+filenameExtSession = "data"
 
-filenamePassage :: Passage -> String
-filenamePassage = (++ filenameExtPassage)
+filenamePassage :: Passage -> System.FilePath.FilePath
+filenamePassage = (System.FilePath.<.> filenameExtPassage)
                 . filter Data.Char.isLetter
                 . filter Data.Char.isPrint
                 . name
 
-filenameSession :: Passage -> String
-filenameSession = (++ filenameExtSession)
+filenameSession :: Passage -> System.FilePath.FilePath
+filenameSession = (System.FilePath.<.> filenameExtSession)
                 . filter Data.Char.isLetter
                 . filter Data.Char.isPrint
                 . name
