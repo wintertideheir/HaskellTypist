@@ -18,6 +18,7 @@ executable HaskellTypist
   other-modules:       Passage,
                        Interface,
                        Interface.InterfaceSession,
+                       Interface.InterfacePassage,
                        Themes
   ghc-options:         -threaded -Wall
                        -F -pgmF=record-dot-preprocessor
