@@ -1,4 +1,4 @@
-# Revision history for HaskellTypist
+# Revision history for haskell-typist
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

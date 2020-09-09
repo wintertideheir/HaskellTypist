@@ -1,8 +1,8 @@
-name:                HaskellTypist
+name:                haskell-typist
 version:             0.1.0.0
 synopsis:            A variant of GNU Typist written in Haskell
 -- description:
-homepage:            https://github.com/wintertideheir/HaskellTypist
+homepage:            https://github.com/wintertideheir/haskell-typist
 license:             AGPL-3
 license-file:        LICENSE
 author:              Autumn Ara
@@ -13,7 +13,7 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
-executable HaskellTypist
+executable haskell-typist
   main-is:             Main.hs
   other-modules:       Passage,
                        Interface,
