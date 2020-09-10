@@ -2,7 +2,7 @@ module Main where
 
 import Passage
 import Interface
-import Interface.InterfaceSession
+import Interface.Session
 import Themes
 
 import Brick
@@ -46,7 +46,7 @@ exampleText = "Gallia est omnis divisa in partes tres, quarum \
 --                            App Data                               --
 -----------------------------------------------------------------------
 
-app :: App InterfaceSession () ()
+app :: App ISession () ()
 app = App { appDraw         = draw'
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = input
@@ -61,8 +61,8 @@ draw' = pure
       . center
       . draw
 
-main :: IO InterfaceSession
+main :: IO ISession
 main =
     do passages' <- newPassage [] "Example Passage" exampleText
-       let td = InterfaceSession passages' []
+       let td = ISession passages' []
        defaultMain app td

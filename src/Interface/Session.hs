@@ -1,4 +1,4 @@
-module Interface.InterfaceSession where
+module Interface.Session where
 
 import Passage
 import Interface
@@ -11,11 +11,11 @@ import qualified Graphics.Vty as V
 import qualified Data.List.Extra
 import qualified Control.Monad.IO.Class
 
-data InterfaceSession = InterfaceSession { passages   :: [Passage]
-                                         , keystrokes :: [Keystroke]
-                                         }
+data ISession = ISession { passages   :: [Passage]
+                         , keystrokes :: [Keystroke]
+                         }
 
-instance Interface InterfaceSession where
+instance Interface ISession where
     input interface (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
     input interface (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
     input interface (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
@@ -36,7 +36,7 @@ instance Interface InterfaceSession where
                          $ checkedLines
         in normalLines B.<+> specialLines
 
-record :: InterfaceSession -> Char -> IO InterfaceSession
+record :: ISession -> Char -> IO ISession
 record interface c =
     do keystroke' <- toKeystroke c
        return interface{keystrokes ++ [keystroke']}
