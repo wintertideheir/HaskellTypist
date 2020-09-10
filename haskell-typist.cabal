@@ -19,6 +19,7 @@ executable haskell-typist
                        Interface,
                        Interface.Session,
                        Interface.Passage,
+                       Interface.Combined,
                        Themes
   ghc-options:         -threaded -Wall
                        -F -pgmF=record-dot-preprocessor
