@@ -2,6 +2,9 @@ module Interface.Passage where
 
 import Passage
 import Interface
+import Themes
+
+import qualified Data.Time.Clock
 
 import qualified Brick as B
 import qualified Graphics.Vty as V
@@ -14,11 +17,13 @@ instance Interface IPassage where
     draw interface =
         if null interface.passages
         then B.str "Nothing yet!"
-        else let column n f = B.padLeft (B.Pad 1)
-                            $ B.vBox
-                            $ ((B.str n):)
+        else let column n f = B.vBox
+                            $ ((B.withAttr themeSpecial $ B.str n):)
                             $ map (B.str . f)
                             $ take 5 interface.passages
-             in B.hBox [column "ID"      (show . uid),
-                        column "Passage" name,
-                        column "Date"    (show . date)]
+                 pad l s = if length s < l
+                           then s ++ (replicate (l - length s) ' ')
+                           else s
+             in B.hBox [column (pad (7 +1) "ID")      (take 7  . ('#':) . show . uid),
+                        column (pad (49+1) "Passage") (take 49 . name),
+                        column (pad 10     "Date")    (take 10 . show . Data.Time.Clock.utctDay . date)]
