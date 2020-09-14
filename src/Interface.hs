@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Interface where
 
 import Passage
@@ -15,15 +17,18 @@ data Interface = IPassage { passages   :: [Passage] }
                           , keystrokes :: [Keystroke]
                           }
 
+#define IPASSAGE(x) x@(IPassage _)
+#define ISESSION(x) x@(ISession _ _)
+
 input :: Interface -> B.BrickEvent () () -> B.EventM () (B.Next Interface)
-input interface@(IPassage _)   (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
-input interface@(ISession _ _) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
-input interface@(ISession _ _) (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
-input interface@(ISession _ _) (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
-input interface              _                                       = B.continue interface
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
+input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
+input ISESSION(interface) (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
+input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
+input interface           _                                     = B.continue interface
 
 draw  :: Interface -> B.Widget ()
-draw interface@(IPassage _) =
+draw IPASSAGE(interface) =
     if null interface.passages
     then B.str "Nothing yet!"
     else let column n f = B.vBox
@@ -36,7 +41,7 @@ draw interface@(IPassage _) =
          in B.hBox [column (pad (7 +1) "ID")      (take 7  . ('#':) . show . uid),
                     column (pad (49+1) "Passage") (take 49 . name),
                     column (pad 10     "Date")    (take 10 . show . Data.Time.Clock.utctDay . date)]
-draw interface@(ISession _ _) =
+draw ISESSION(interface) =
     let checkedLines = map groupByScore
                      $ groupByLines
                      $ Passage.render (head interface.passages) interface.keystrokes
@@ -53,7 +58,7 @@ draw interface@(ISession _ _) =
     in normalLines B.<+> specialLines
 
 record :: Interface -> Char -> IO Interface
-record interface@(ISession _ _) c =
+record ISESSION(interface) c =
     do keystroke' <- toKeystroke c
        return interface{keystrokes ++ [keystroke']}
 
