@@ -2,8 +2,6 @@ module Main where
 
 import Passage
 import Interface
-import Interface.Combined
-import qualified Interface.Passage as IPassage
 import Themes
 
 import Brick
@@ -47,7 +45,7 @@ exampleText = "Gallia est omnis divisa in partes tres, quarum \
 --                            App Data                               --
 -----------------------------------------------------------------------
 
-app :: App ICombined () ()
+app :: App Interface () ()
 app = App { appDraw         = draw'
           , appChooseCursor = showFirstCursor
           , appHandleEvent  = input
@@ -55,15 +53,15 @@ app = App { appDraw         = draw'
           , appAttrMap      = const themes
           }
 
-draw' :: Interface a => a -> [Widget ()]
+draw' :: Interface -> [Widget ()]
 draw' = pure
       . withBorderStyle unicode
       . borderWithLabel (str "Haskell Typist")
       . center
       . draw
 
-main :: IO ICombined
+main :: IO Interface
 main =
     do passages' <- newPassage [] "Example Passage" exampleText
-       let td = IPassage (IPassage.IPassage passages')
+       let td = IPassage passages'
        defaultMain app td

@@ -17,9 +17,6 @@ executable haskell-typist
   main-is:             Main.hs
   other-modules:       Passage,
                        Interface,
-                       Interface.Session,
-                       Interface.Passage,
-                       Interface.Combined,
                        Themes
   ghc-options:         -threaded -Wall
                        -F -pgmF=record-dot-preprocessor
