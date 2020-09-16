@@ -17,16 +17,20 @@ data Interface = IPassage { passages   :: [Passage]
                           , selected   :: Int
                           }
                | ISession { passages   :: [Passage]
+                          , selected   :: Int
                           , keystrokes :: [Keystroke]
                           }
 
 #define IPASSAGE(x) x@(IPassage _ _)
-#define ISESSION(x) x@(ISession _ _)
+#define ISESSION(x) x@(ISession _ _ _)
 
 input :: Interface -> B.BrickEvent () () -> B.EventM () (B.Next Interface)
 input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
 input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KUp []))       = B.continue (interface{selected (boundedAdd 0 (length interface.passages - 1)) -1})
 input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KDown []))     = B.continue (interface{selected (boundedAdd 0 (length interface.passages - 1))  1})
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEnter []))    = B.continue (if null interface.passages
+                                                                              then interface
+                                                                              else ISession interface.passages interface.selected [])
 input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
 input ISESSION(interface) (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
 input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
@@ -54,7 +58,7 @@ draw IPASSAGE(interface) =
 draw ISESSION(interface) =
     let checkedLines = map groupByScore
                      $ groupByLines
-                     $ Passage.render (head interface.passages) interface.keystrokes
+                     $ Passage.render ((Data.List.sortBy (\a b -> compare a.uid b.uid) interface.passages) !! interface.selected) interface.keystrokes
         normalLines = B.vBox
                     $ map B.hBox
                     $ map (map (\(s, m) -> themeRendered themeNormal (filter (/= '\n') s) m))
