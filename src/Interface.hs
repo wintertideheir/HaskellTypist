@@ -6,22 +6,27 @@ import Passage
 import Themes
 
 import qualified Control.Monad.IO.Class
+import qualified Data.List
 import qualified Data.List.Extra
 import qualified Data.Time.Clock
 
 import qualified Brick        as B
 import qualified Graphics.Vty as V
 
-data Interface = IPassage { passages   :: [Passage] }
+data Interface = IPassage { passages   :: [Passage]
+                          , selected   :: Int
+                          }
                | ISession { passages   :: [Passage]
                           , keystrokes :: [Keystroke]
                           }
 
-#define IPASSAGE(x) x@(IPassage _)
+#define IPASSAGE(x) x@(IPassage _ _)
 #define ISESSION(x) x@(ISession _ _)
 
 input :: Interface -> B.BrickEvent () () -> B.EventM () (B.Next Interface)
 input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KUp []))       = B.continue (interface{selected (boundedAdd 0 (length interface.passages - 1)) -1})
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KDown []))     = B.continue (interface{selected (boundedAdd 0 (length interface.passages - 1))  1})
 input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
 input ISESSION(interface) (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
 input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
@@ -33,8 +38,13 @@ draw IPASSAGE(interface) =
     then B.str "Nothing yet!"
     else let column n f = B.vBox
                         $ ((B.withAttr themeSpecial $ B.str n):)
+                        $ map (\(i, p) -> if i == interface.selected
+                                          then B.withAttr (themeNormal <> themeMatch) p
+                                          else p)
+                        $ zip [0..]
                         $ map (B.str . f)
-                        $ take 5 interface.passages
+                        $ take 5
+                        $ Data.List.sortBy (\a b -> compare a.uid b.uid) interface.passages
              pad l s = if length s < l
                        then s ++ (replicate (l - length s) ' ')
                        else s
@@ -61,6 +71,9 @@ record :: Interface -> Char -> IO Interface
 record ISESSION(interface) c =
     do keystroke' <- toKeystroke c
        return interface{keystrokes ++ [keystroke']}
+
+boundedAdd :: Int -> Int -> Int -> Int -> Int
+boundedAdd xmin xmax x1 x2 = max xmin (min xmax (x1 + x2))
 
 themeRendered :: B.AttrName -> String -> Maybe Bool -> B.Widget ()
 themeRendered t s Nothing = B.showCursor () (B.Location (0, 0))

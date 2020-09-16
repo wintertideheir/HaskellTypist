@@ -114,5 +114,5 @@ main :: IO Interface
 main =
     do passages'  <- newPassage []        "Commentarii de Bello Gallico" deBelloGallico
        passages'' <- newPassage passages' "Pride and Prejudice"          prideAndPrejudice
-       let td = IPassage passages''
+       let td = IPassage passages'' 0
        defaultMain app td
