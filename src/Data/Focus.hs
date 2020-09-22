@@ -12,9 +12,13 @@ mapFocus :: (a -> a) -> FocusedList a -> FocusedList a
 mapFocus f (FocusedList l i) = FocusedList (modifyNth l i f) i
 mapFocus _ (UnfocusedList l) = UnfocusedList l
 
-focus :: FocusedList a -> Maybe Int
-focus (FocusedList _ i) = Just i
-focus (UnfocusedList _) = Nothing
+focusI :: FocusedList a -> Maybe Int
+focusI (FocusedList _ i) = Just i
+focusI (UnfocusedList _) = Nothing
+
+focusA :: FocusedList a -> Maybe a
+focusA (FocusedList l i) = Just (l !! i)
+focusA (UnfocusedList l) = Nothing
 
 refocus ::  Int -> FocusedList a -> FocusedList a
 refocus i l = let l' = unwrap l
@@ -34,5 +38,5 @@ wrap :: [a] -> FocusedList a
 wrap = UnfocusedList
 
 rewrap :: ([a] -> [a]) -> FocusedList a -> FocusedList a
-rewrap f (FocusedList l i) = FocusedList   (f l) i
-rewrap f (UnfocusedList l) = UnfocusedList (f l)
+rewrap f (FocusedList l i) = refocus i $ FocusedList   (f l) i
+rewrap f (UnfocusedList l) = refocus i $ UnfocusedList (f l)
