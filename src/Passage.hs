@@ -80,8 +80,8 @@ render passage keystrokes =
             else (t, Just False) : render' ts ss
     in render' passage.text (map fromKeystroke keystrokes)
 
-newPassage :: [Passage] -> String -> String -> IO [Passage]
-newPassage passages name' text' =
+newPassage :: String -> String -> [Passage] -> IO [Passage]
+newPassage name' text' passages =
     do date' <- Data.Time.Clock.getCurrentTime
        let free_uids = Data.List.find (`notElem` (map uid passages)) [0..maxBound]
            error_msg = "No unique passage identifier possible for \"" ++ name' ++ "\"."
