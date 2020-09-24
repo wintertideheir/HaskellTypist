@@ -94,7 +94,7 @@ newPassage name' text' passages =
                              , text     = text'
                              , sessions = Transient []
                              }
-       return (passage:passages)
+       return $ Data.List.sortBy (\a b -> compare a.uid b.uid) (passage:passages)
 
 newSession :: [Passage] -> Int -> [Keystroke] -> IO [Passage]
 newSession passages uid' keystrokes =

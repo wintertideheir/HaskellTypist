@@ -4,33 +4,31 @@ module Interface where
 
 import Passage
 import Themes
+import Data.Focus
 
 import qualified Control.Monad.IO.Class
-import qualified Data.List
 import qualified Data.List.Extra
 import qualified Data.Time.Clock
 
 import qualified Brick        as B
 import qualified Graphics.Vty as V
 
-data Interface = IPassage { passages   :: [Passage]
-                          , selected   :: Int
+data Interface = IPassage { passages   :: Maybe (FocusedList Passage)
                           }
-               | ISession { passages   :: [Passage]
-                          , selected   :: Int
+               | ISession { passage    :: FocusedList Passage
                           , keystrokes :: [Keystroke]
                           }
 
-#define IPASSAGE(x) x@(IPassage _ _)
-#define ISESSION(x) x@(ISession _ _ _)
+#define IPASSAGE(x) x@(IPassage _)
+#define ISESSION(x) x@(ISession _ _)
 
 input :: Interface -> B.BrickEvent () () -> B.EventM () (B.Next Interface)
 input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
-input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KUp []))       = B.continue (interface{selected (boundedAdd 0 (length interface.passages - 1)) -1})
-input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KDown []))     = B.continue (interface{selected (boundedAdd 0 (length interface.passages - 1))  1})
-input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEnter []))    = B.continue (if null interface.passages
-                                                                              then interface
-                                                                              else ISession interface.passages interface.selected [])
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KUp []))       = B.continue (interface{passages = fmap focusUp interface.passages})
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KDown []))     = B.continue (interface{passages = fmap focusDown interface.passages})
+input IPASSAGE(interface) (B.VtyEvent (V.EvKey V.KEnter []))    = B.continue (case interface.passages of
+                                                                                  Nothing -> interface
+                                                                                  Just l  -> ISession l [])
 input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEsc []))      = B.halt interface
 input ISESSION(interface) (B.VtyEvent (V.EvKey (V.KChar c) [])) = Control.Monad.IO.Class.liftIO (record interface c)    >>= B.continue
 input ISESSION(interface) (B.VtyEvent (V.EvKey V.KEnter    [])) = Control.Monad.IO.Class.liftIO (record interface '\n') >>= B.continue
@@ -38,27 +36,40 @@ input interface           _                                     = B.continue int
 
 draw  :: Interface -> B.Widget ()
 draw IPASSAGE(interface) =
-    if null interface.passages
-    then B.str "Nothing yet!"
-    else let column n f = B.vBox
-                        $ ((B.withAttr themeSpecial $ B.str n):)
-                        $ map (\(i, p) -> if i == interface.selected
-                                          then B.withAttr (themeNormal <> themeMatch) p
-                                          else p)
-                        $ zip [0..]
-                        $ map (B.str . f)
-                        $ take 5
-                        $ Data.List.sortBy (\a b -> compare a.uid b.uid) interface.passages
-             pad l s = if length s < l
-                       then s ++ (replicate (l - length s) ' ')
-                       else s
-         in B.hBox [column (pad (7 +1) "ID")      (take 7  . ('#':) . show . uid),
-                    column (pad (49+1) "Passage") (take 49 . name),
-                    column (pad 10     "Date")    (take 10 . show . Data.Time.Clock.utctDay . date)]
+    case interface.passages of
+        Nothing -> B.str "Nothing yet!"
+        Just passages' ->
+            let column' l f = (map B.str
+                              $ map (take l . f)
+                              $ reverse
+                              $ take 3
+                              $ reverse
+                              $ passages'.before)
+                           ++ [B.withAttr (themeNormal <> themeMatch)
+                              $ B.str
+                              $ f
+                              $ passages'.focus]
+                           ++ (map B.str
+                              $ map (take l . f)
+                              $ take 3
+                              $ passages'.after)
+                column n l f = B.vBox
+                               $ ((B.withAttr themeSpecial
+                                  $ B.str
+                                  $ pad (l+1)
+                                  $ take l
+                                  $ n):)
+                               $ column' l f
+                pad l s = if length s < l
+                          then s ++ (replicate (l - length s) ' ')
+                          else s
+            in B.hBox [column "ID"      7  (('#':) . show . uid),
+                       column "Passage" 49 name,
+                       column "Date"    10 (show . Data.Time.Clock.utctDay . date)]
 draw ISESSION(interface) =
     let checkedLines = map groupByScore
                      $ groupByLines
-                     $ Passage.render ((Data.List.sortBy (\a b -> compare a.uid b.uid) interface.passages) !! interface.selected) interface.keystrokes
+                     $ Passage.render interface.passage.focus interface.keystrokes
         normalLines = B.vBox
                     $ map B.hBox
                     $ map (map (\(s, m) -> themeRendered themeNormal (filter (/= '\n') s) m))

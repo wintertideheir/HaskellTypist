@@ -3,6 +3,7 @@ module Main where
 import Passage
 import Interface
 import Themes
+import Data.Focus
 
 import Brick
 import Brick.Widgets.Center
@@ -112,17 +113,16 @@ draw' = pure
 
 main :: IO Interface
 main =
-    do passages'  <- (newPassage "Commentarii de Bello Gallico" deBelloGallico []
-                  >>= newPassage "Pride and Prejudice"          prideAndPrejudice
-                  >>= newPassage "Example 1"                    "I'm just a short example!"
-                  >>= newPassage "Example 2"                    "I'm another short example!"
-                  >>= newPassage "Example 3"                    "I'm the third short example!"
-                  >>= newPassage "Example 4"                    "I'm number four!"
-                  >>= newPassage "Example 5"                    "Well, I'm number 5."
-                  >>= newPassage "Example 6"                    "Wait, what number are we at!"
-                  >>= newPassage "Example 7"                    "Twelve...?"
-                  >>= newPassage "Example 8"                    "I'm number 13!"
-                  >>= newPassage "Example 9"                    "*quiet*"
-                  >>= newPassage "Example 10"                   "Let's start from the beginning.")
-       let td = IPassage passages' 0
-       defaultMain app td
+    do passages' <- (newPassage "Commentarii de Bello Gallico" deBelloGallico []
+                 >>= newPassage "Pride and Prejudice"          prideAndPrejudice
+                 >>= newPassage "Example 1"                    "I'm just a short example!"
+                 >>= newPassage "Example 2"                    "I'm another short example!"
+                 >>= newPassage "Example 3"                    "I'm the third short example!"
+                 >>= newPassage "Example 4"                    "I'm number four!"
+                 >>= newPassage "Example 5"                    "Well, I'm number 5."
+                 >>= newPassage "Example 6"                    "Wait, what number are we at!"
+                 >>= newPassage "Example 7"                    "Twelve...?"
+                 >>= newPassage "Example 8"                    "I'm number 13!"
+                 >>= newPassage "Example 9"                    "*quiet*"
+                 >>= newPassage "Example 10"                   "Let's start from the beginning.")
+       defaultMain app (IPassage (Just (focusList passages')))
