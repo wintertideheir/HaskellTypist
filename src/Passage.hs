@@ -6,7 +6,6 @@
 
 module Passage where
 
-import qualified Data.Char
 import qualified Data.Time.Clock
 import qualified Data.Time.Clock.System
 import qualified Data.Time.Calendar
@@ -15,7 +14,6 @@ import qualified Data.List.Extra
 import qualified Flat
 import qualified Flat.Decoder.Types
 import qualified GHC.Generics
-import qualified System.FilePath
 
 -----------------------------------------------------------------------
 --                          Serialization                            --
@@ -141,15 +139,3 @@ filenameExtPassage :: String
 filenameExtSession :: String
 filenameExtPassage = "htyp"
 filenameExtSession = "data"
-
-filenamePassage :: Passage -> System.FilePath.FilePath
-filenamePassage = (System.FilePath.<.> filenameExtPassage)
-                . filter Data.Char.isLetter
-                . filter Data.Char.isPrint
-                . name
-
-filenameSession :: Passage -> System.FilePath.FilePath
-filenameSession = (System.FilePath.<.> filenameExtSession)
-                . filter Data.Char.isLetter
-                . filter Data.Char.isPrint
-                . name

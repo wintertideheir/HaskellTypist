@@ -27,7 +27,6 @@ executable haskell-typist
                        vty,
                        extra,
                        time,
-                       filepath,
                        record-hasfield,
                        record-dot-preprocessor
   hs-source-dirs:      src
