@@ -11,6 +11,7 @@ import qualified Data.Time.Clock
 import qualified Data.Time.Clock.System
 import qualified Data.Time.Calendar
 import qualified Data.List
+import qualified Data.List.Extra
 import qualified Flat
 import qualified Flat.Decoder.Types
 import qualified GHC.Generics
@@ -70,16 +71,6 @@ data Passage = Passage { uid      :: Int
 --                            Functions                              --
 -----------------------------------------------------------------------
 
-render :: Passage -> [Keystroke] -> [(Char, Maybe Bool)]
-render passage keystrokes =
-    let render' []     _      = []
-        render' t      []     = [(t', Nothing) | t' <- t]
-        render' (t:ts) (s:ss) =
-            if t == s
-            then (t, Just True)  : render' ts ss
-            else (t, Just False) : render' ts ss
-    in render' passage.text (map fromKeystroke keystrokes)
-
 newPassage :: String -> String -> [Passage] -> IO [Passage]
 newPassage name' text' passages =
     do date' <- Data.Time.Clock.getCurrentTime
@@ -96,8 +87,8 @@ newPassage name' text' passages =
                              }
        return $ Data.List.sortBy (\a b -> compare a.uid b.uid) (passage:passages)
 
-newSession :: [Passage] -> Int -> [Keystroke] -> IO [Passage]
-newSession passages uid' keystrokes =
+newSession :: Int -> [Keystroke] -> [Passage] -> IO [Passage]
+newSession uid' keystrokes passages =
     do date' <- Data.Time.Clock.getCurrentTime
        let session = Session date' keystrokes
            compare_uid = (== uid') . uid
@@ -106,6 +97,41 @@ newSession passages uid' keystrokes =
                            (a, (b:bs)) -> a ++ ((b{sessions = fmap (++ [session]) b.sessions}):bs)
                            (_, [])     -> error error_msg
        return passages'
+
+-----------------------------------------------------------------------
+--                         Rendering                                 --
+-----------------------------------------------------------------------
+
+render :: Passage -> [Keystroke] -> [(Char, Maybe Bool)]
+render passage keystrokes =
+    let render' []     _      = []
+        render' t      []     = [(t', Nothing) | t' <- t]
+        render' (t:ts) (s:ss) =
+            if t == s
+            then (t, Just True)  : render' ts ss
+            else (t, Just False) : render' ts ss
+    in render' passage.text (map fromKeystroke keystrokes)
+
+groupByLines :: [(Char, Maybe Bool)] -> [[(Char, Maybe Bool)]]
+groupByLines x =
+    let lineShouldEnd l  ' '  = length l > 50
+        lineShouldEnd _  '\n' = True
+        lineShouldEnd _  _    = False
+        stackReadable [] c     = [[c]]
+        stackReadable (l:ls) c =
+            if lineShouldEnd l (fst c)
+            then []:(c:l):ls
+            else    (c:l):ls
+    in map reverse
+       $ reverse
+       $ foldl stackReadable [] x
+
+groupByScore :: [(Char, Maybe Bool)] -> [(String, Maybe Bool)]
+groupByScore x =
+    let collapseSameScore [] = ([],        Nothing)
+        collapseSameScore l  = (map fst l, snd $ head l)
+    in map collapseSameScore
+       $ Data.List.Extra.groupOn snd x
 
 -----------------------------------------------------------------------
 --                           Files                                   --

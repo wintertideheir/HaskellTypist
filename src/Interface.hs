@@ -7,7 +7,6 @@ import Themes
 import Data.Focus
 
 import qualified Control.Monad.IO.Class
-import qualified Data.List.Extra
 import qualified Data.Time.Clock
 
 import qualified Brick        as B
@@ -67,8 +66,8 @@ draw IPASSAGE(interface) =
                        column "Passage" 49 name,
                        column "Date"    10 (show . Data.Time.Clock.utctDay . date)]
 draw ISESSION(interface) =
-    let checkedLines = map groupByScore
-                     $ groupByLines
+    let checkedLines = map Passage.groupByScore
+                     $ Passage.groupByLines
                      $ Passage.render interface.passage.focus interface.keystrokes
         normalLines = B.vBox
                     $ map B.hBox
@@ -87,33 +86,9 @@ record ISESSION(interface) c =
     do keystroke' <- toKeystroke c
        return interface{keystrokes ++ [keystroke']}
 
-boundedAdd :: Int -> Int -> Int -> Int -> Int
-boundedAdd xmin xmax x1 x2 = max xmin (min xmax (x1 + x2))
-
 themeRendered :: B.AttrName -> String -> Maybe Bool -> B.Widget ()
 themeRendered t s Nothing = B.showCursor () (B.Location (0, 0))
                           $ B.withAttr t
                           $ B.str s
 themeRendered t s (Just True)  = B.withAttr (t <> themeMatch) $ B.str s
 themeRendered t s (Just False) = B.withAttr (t <> themeMiss)  $ B.str s
-
-groupByLines :: [(Char, Maybe Bool)] -> [[(Char, Maybe Bool)]]
-groupByLines x =
-    let lineShouldEnd l  ' '  = length l > 50
-        lineShouldEnd _  '\n' = True
-        lineShouldEnd _  _    = False
-        stackReadable [] c     = [[c]]
-        stackReadable (l:ls) c =
-            if lineShouldEnd l (fst c)
-            then []:(c:l):ls
-            else    (c:l):ls
-    in map reverse
-       $ reverse
-       $ foldl stackReadable [] x
-
-groupByScore :: [(Char, Maybe Bool)] -> [(String, Maybe Bool)]
-groupByScore x =
-    let collapseSameScore [] = ([],        Nothing)
-        collapseSameScore l  = (map fst l, snd $ head l)
-    in map collapseSameScore
-       $ Data.List.Extra.groupOn snd x
